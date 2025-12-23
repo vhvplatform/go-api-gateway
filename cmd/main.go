@@ -15,12 +15,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/longvhv/saas-framework-go/pkg/config"
 	"github.com/longvhv/saas-framework-go/pkg/logger"
+	pkgmiddleware "github.com/longvhv/saas-framework-go/pkg/middleware"
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/cache"
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/circuitbreaker"
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/client"
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/handler"
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/health"
-	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/middleware"
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/router"
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/tracing"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -35,7 +35,7 @@ func main() {
 	log.Info("Starting API Gateway...")
 
 	// Create main context for graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Load configuration
@@ -113,24 +113,24 @@ func main() {
 	r := gin.New()
 
 	// Recovery middleware with custom error handling
-	r.Use(middleware.RecoveryMiddleware(log))
+	r.Use(pkgmiddleware.Recovery(log))
 
 	// Correlation ID middleware (should be first)
-	r.Use(middleware.CorrelationIDMiddleware())
+	r.Use(pkgmiddleware.CorrelationID())
 
 	// Logging middleware
-	r.Use(middleware.LoggerMiddleware(log))
+	r.Use(pkgmiddleware.Logger(log))
 
 	// Metrics middleware (if enabled)
 	if os.Getenv("ENABLE_METRICS") != "false" {
-		r.Use(middleware.MetricsMiddleware())
+		r.Use(pkgmiddleware.DefaultMetrics("api_gateway"))
 	}
 
 	// Compression middleware
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	// Request validation middleware
-	r.Use(middleware.RequestValidationMiddleware())
+	r.Use(pkgmiddleware.RequestValidation())
 
 	// Request size limit middleware
 	maxRequestSize := int64(10485760) // 10MB default
@@ -139,10 +139,10 @@ func main() {
 			maxRequestSize = parsedSize
 		}
 	}
-	r.Use(middleware.RequestSizeLimitMiddleware(maxRequestSize))
+	r.Use(pkgmiddleware.RequestSizeLimit(maxRequestSize))
 
 	// Timeout middleware
-	r.Use(middleware.TimeoutMiddleware(30 * time.Second))
+	r.Use(pkgmiddleware.Timeout(30 * time.Second))
 
 	// CORS configuration
 	corsConfig := cors.Config{
@@ -168,8 +168,7 @@ func main() {
 			rateBurst = parsedBurst
 		}
 	}
-	rateLimiter := middleware.NewRateLimiter(rateLimit, rateBurst)
-	r.Use(middleware.RateLimitMiddleware(rateLimiter, ctx))
+	r.Use(pkgmiddleware.PerIP(rateLimit, rateBurst))
 
 	// Health check endpoints
 	r.GET("/health", func(c *gin.Context) {

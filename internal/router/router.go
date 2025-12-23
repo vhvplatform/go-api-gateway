@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/longvhv/saas-framework-go/pkg/config"
 	"github.com/longvhv/saas-framework-go/pkg/logger"
+	pkgmiddleware "github.com/longvhv/saas-framework-go/pkg/middleware"
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/handler"
-	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/middleware"
 )
 
 // SetupRoutes configures all API routes
@@ -27,12 +27,12 @@ func SetupRoutes(
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/refresh", authHandler.RefreshToken)
-			auth.POST("/logout", middleware.AuthMiddleware(cfg.JWT.Secret), authHandler.Logout)
+			auth.POST("/logout", pkgmiddleware.Auth(cfg.JWT.Secret), authHandler.Logout)
 		}
 
 		// Protected routes (require authentication)
 		protected := v1.Group("")
-		protected.Use(middleware.AuthMiddleware(cfg.JWT.Secret))
+		protected.Use(pkgmiddleware.Auth(cfg.JWT.Secret))
 		{
 			// User routes
 			users := protected.Group("/users")
