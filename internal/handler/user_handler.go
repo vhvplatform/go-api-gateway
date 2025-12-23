@@ -1,6 +1,7 @@
 package handler
 
 import (
+"go.uber.org/zap"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -74,7 +75,7 @@ func (h *UserHandler) forwardRequest(c *gin.Context, targetURL, method string) {
 
 	req, err := http.NewRequest(method, targetURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
-		h.log.Error("Failed to create request", "error", err)
+		h.log.Error("Failed to create request", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to forward request"})
 		return
 	}
@@ -86,7 +87,7 @@ func (h *UserHandler) forwardRequest(c *gin.Context, targetURL, method string) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		h.log.Error("Failed to forward request", "error", err, "url", targetURL)
+		h.log.Error("Failed to forward request", zap.Error(err), zap.String("url", targetURL))
 		c.JSON(http.StatusBadGateway, gin.H{"error": "Service unavailable"})
 		return
 	}
@@ -94,7 +95,7 @@ func (h *UserHandler) forwardRequest(c *gin.Context, targetURL, method string) {
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		h.log.Error("Failed to read response", "error", err)
+		h.log.Error("Failed to read response", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response"})
 		return
 	}
