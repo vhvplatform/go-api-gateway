@@ -1,10 +1,7 @@
 package handler
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -62,44 +59,48 @@ func (h *NotificationHandler) GetNotification(c *gin.Context) {
 
 // forwardRequest is a helper method to forward requests
 func (h *NotificationHandler) forwardRequest(c *gin.Context, targetURL, method string) {
-	var bodyBytes []byte
-	if c.Request.Body != nil {
-		bodyBytes, _ = io.ReadAll(c.Request.Body)
-		c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	var body map[string]interface{}
+	if c.Request.Body != nil && method != "GET" {
+		if err := c.ShouldBindJSON(&body); err != nil {
+			h.log.Error("Failed to parse request body", zap.Error(err))
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+			return
+		}
 	}
 
-	req, err := http.NewRequest(method, targetURL, bytes.NewBuffer(bodyBytes))
-	if err != nil {
-		h.log.Error("Failed to create request", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to forward request"})
+	// Extract path from full URL
+	path := targetURL
+	if len(h.baseURL) > 0 && len(targetURL) > len(h.baseURL) {
+		path = targetURL[len(h.baseURL):]
+	}
+
+	var result map[string]interface{}
+	var err error
+
+	switch method {
+	case "GET":
+		err = h.client.Get(c.Request.Context(), path, &result)
+	case "POST":
+		err = h.client.Post(c.Request.Context(), path, body, &result)
+	case "PUT":
+		err = h.client.Put(c.Request.Context(), path, body, &result)
+	case "DELETE":
+		err = h.client.Delete(c.Request.Context(), path)
+		if err == nil {
+			c.JSON(http.StatusOK, gin.H{"message": "deleted"})
+			return
+		}
+	default:
+		h.log.Error("Unsupported HTTP method", zap.String("method", method))
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
 		return
 	}
 
-	req.Header.Set("Content-Type", c.GetHeader("Content-Type"))
-	req.Header.Set("X-Correlation-ID", c.GetString("correlation_id"))
-	req.Header.Set("X-Tenant-ID", c.GetString("tenant_id"))
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
 	if err != nil {
 		h.log.Error("Failed to forward request", zap.Error(err), zap.String("url", targetURL))
 		c.JSON(http.StatusBadGateway, gin.H{"error": "Service unavailable"})
 		return
 	}
-	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		h.log.Error("Failed to read response", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response"})
-		return
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), respBody)
-		return
-	}
-
-	c.JSON(resp.StatusCode, result)
+	c.JSON(http.StatusOK, result)
 }
