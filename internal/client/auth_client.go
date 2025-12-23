@@ -1,6 +1,10 @@
 package client
 
 import (
+	"context"
+	"time"
+
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/longvhv/saas-framework-go/pkg/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -13,14 +17,35 @@ type AuthClient struct {
 	// client proto.AuthServiceClient // Uncomment when proto is generated
 }
 
-// NewAuthClient creates a new auth client
+// NewAuthClient creates a new auth client with retry logic
 func NewAuthClient(serviceURL string, log *logger.Logger) *AuthClient {
-	conn, err := grpc.Dial(serviceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Error("Failed to connect to auth service", "error", err, "url", serviceURL)
-		// For now, continue without panic to allow graceful degradation
+	retryOpts := []grpc_retry.CallOption{
+		grpc_retry.WithBackoff(grpc_retry.BackoffExponential(100 * time.Millisecond)),
+		grpc_retry.WithMax(3),
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(
+		ctx,
+		serviceURL,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(retryOpts...)),
+		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor(retryOpts...)),
+		grpc.WithBlock(),
+	)
+
+	if err != nil {
+		log.Error("Failed to connect to auth service", "error", err, "url", serviceURL)
+		// Return client with nil connection for graceful degradation
+		return &AuthClient{
+			conn: nil,
+			log:  log,
+		}
+	}
+
+	log.Info("Successfully connected to auth service", "url", serviceURL)
 	return &AuthClient{
 		conn: conn,
 		log:  log,
