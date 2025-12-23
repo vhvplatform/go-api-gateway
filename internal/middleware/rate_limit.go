@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"sync"
 	"time"
@@ -35,18 +36,29 @@ func NewRateLimiter(rps float64, burst int) *RateLimiter {
 // GetLimiter returns a limiter for the given key
 func (rl *RateLimiter) GetLimiter(key string) *rate.Limiter {
 	rl.mu.RLock()
-	entry, exists := rl.limiters[key]
+	_, exists := rl.limiters[key]
 	rl.mu.RUnlock()
 
 	if exists {
 		// Update last access time
 		rl.mu.Lock()
+		// Check again after acquiring write lock
+		if entry, exists := rl.limiters[key]; exists {
+			entry.lastAccess = time.Now()
+			rl.mu.Unlock()
+			return entry.limiter
+		}
+		rl.mu.Unlock()
+	}
+
+	rl.mu.Lock()
+	// Double-check after acquiring write lock
+	if entry, exists := rl.limiters[key]; exists {
 		entry.lastAccess = time.Now()
 		rl.mu.Unlock()
 		return entry.limiter
 	}
 
-	rl.mu.Lock()
 	limiter := rate.NewLimiter(rl.rate, rl.burst)
 	rl.limiters[key] = &limiterEntry{
 		limiter:    limiter,
@@ -58,27 +70,32 @@ func (rl *RateLimiter) GetLimiter(key string) *rate.Limiter {
 }
 
 // CleanupLimiters removes inactive limiters
-func (rl *RateLimiter) CleanupLimiters() {
+func (rl *RateLimiter) CleanupLimiters(ctx context.Context) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		rl.mu.Lock()
-		now := time.Now()
-		for key, entry := range rl.limiters {
-			// Only delete if inactive for 10 minutes
-			if now.Sub(entry.lastAccess) > 10*time.Minute {
-				delete(rl.limiters, key)
+	for {
+		select {
+		case <-ticker.C:
+			rl.mu.Lock()
+			now := time.Now()
+			for key, entry := range rl.limiters {
+				// Only delete if inactive for 10 minutes
+				if now.Sub(entry.lastAccess) > 10*time.Minute {
+					delete(rl.limiters, key)
+				}
 			}
+			rl.mu.Unlock()
+		case <-ctx.Done():
+			return
 		}
-		rl.mu.Unlock()
 	}
 }
 
 // RateLimitMiddleware implements rate limiting middleware
-func RateLimitMiddleware(rl *RateLimiter) gin.HandlerFunc {
-	// Start cleanup goroutine
-	go rl.CleanupLimiters()
+func RateLimitMiddleware(rl *RateLimiter, ctx context.Context) gin.HandlerFunc {
+	// Start cleanup goroutine with context
+	go rl.CleanupLimiters(ctx)
 
 	return func(c *gin.Context) {
 		// Use IP address as the key

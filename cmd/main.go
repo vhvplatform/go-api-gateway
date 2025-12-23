@@ -34,6 +34,10 @@ func main() {
 
 	log.Info("Starting API Gateway...")
 
+	// Create main context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -165,7 +169,7 @@ func main() {
 		}
 	}
 	rateLimiter := middleware.NewRateLimiter(rateLimit, rateBurst)
-	r.Use(middleware.RateLimitMiddleware(rateLimiter))
+	r.Use(middleware.RateLimitMiddleware(rateLimiter, ctx))
 
 	// Health check endpoints
 	r.GET("/health", func(c *gin.Context) {
@@ -217,11 +221,14 @@ func main() {
 
 	log.Info("Shutting down API Gateway...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	// Cancel context to stop background goroutines
+	cancel()
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
 
 	// Shutdown HTTP server
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("Server forced to shutdown", zap.Error(err))
 	}
 

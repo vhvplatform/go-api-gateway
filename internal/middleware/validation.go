@@ -18,7 +18,7 @@ c.Next()
 func RequestValidationMiddleware() gin.HandlerFunc {
 return func(c *gin.Context) {
 // Validate required headers for non-GET/DELETE requests
-if c.Request.Method != "GET" && c.Request.Method != "DELETE" {
+if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodDelete {
 contentType := c.GetHeader("Content-Type")
 if contentType == "" {
 c.JSON(http.StatusBadRequest, gin.H{
