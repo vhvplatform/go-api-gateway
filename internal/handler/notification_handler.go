@@ -1,7 +1,6 @@
 package handler
 
 import (
-"go.uber.org/zap"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,19 +8,29 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/longvhv/saas-framework-go/pkg/httpclient"
 	"github.com/longvhv/saas-framework-go/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // NotificationHandler handles notification-related requests
 type NotificationHandler struct {
 	baseURL string
+	client  *httpclient.Client
 	log     *logger.Logger
 }
 
 // NewNotificationHandler creates a new notification handler
 func NewNotificationHandler(baseURL string, log *logger.Logger) *NotificationHandler {
+	client := httpclient.NewClient(
+		httpclient.WithBaseURL(baseURL),
+		httpclient.WithRetry(3, 1),
+		httpclient.WithCircuitBreaker(),
+	)
+	
 	return &NotificationHandler{
 		baseURL: baseURL,
+		client:  client,
 		log:     log,
 	}
 }
