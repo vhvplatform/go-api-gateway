@@ -10,7 +10,8 @@ import (
 
 // AuthMiddleware validates JWT tokens
 func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
-	jwtManager := jwt.NewJWTManager(jwtSecret)
+	// Use default expiration values since we only need to validate tokens
+	jwtManager := jwt.NewManager(jwtSecret, 3600, 86400)
 
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")

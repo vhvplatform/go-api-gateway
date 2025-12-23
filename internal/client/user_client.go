@@ -6,6 +6,7 @@ import (
 
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/longvhv/saas-framework-go/pkg/logger"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -37,7 +38,7 @@ func NewUserClient(serviceURL string, log *logger.Logger) *UserClient {
 	)
 
 	if err != nil {
-		log.Error("Failed to connect to user service", "error", err, "url", serviceURL)
+		log.Error("Failed to connect to user service", zap.Error(err), zap.String("url", serviceURL))
 		// Return client with nil connection for graceful degradation
 		return &UserClient{
 			conn: nil,
@@ -45,7 +46,7 @@ func NewUserClient(serviceURL string, log *logger.Logger) *UserClient {
 		}
 	}
 
-	log.Info("Successfully connected to user service", "url", serviceURL)
+	log.Info("Successfully connected to user service", zap.String("url", serviceURL))
 	return &UserClient{
 		conn: conn,
 		log:  log,

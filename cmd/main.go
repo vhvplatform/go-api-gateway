@@ -24,6 +24,7 @@ import (
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/router"
 	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/tracing"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Failed to load configuration", "error", err)
+		log.Fatal("Failed to load configuration", zap.Error(err))
 	}
 
 	// Initialize distributed tracing (optional)
@@ -44,13 +45,13 @@ func main() {
 		jaegerURL := getServiceURL("JAEGER_URL", "http://jaeger:14268/api/traces")
 		tp, err := tracing.InitTracer("api-gateway", jaegerURL)
 		if err != nil {
-			log.Error("Failed to initialize tracer", "error", err)
+			log.Error("Failed to initialize tracer", zap.Error(err))
 		} else {
 			defer func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				if err := tp.Shutdown(ctx); err != nil {
-					log.Error("Failed to shutdown tracer", "error", err)
+					log.Error("Failed to shutdown tracer", zap.Error(err))
 				}
 			}()
 			log.Info("Distributed tracing enabled")
@@ -62,7 +63,7 @@ func main() {
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
 		cacheClient, err = cache.NewCache(redisURL)
 		if err != nil {
-			log.Error("Failed to initialize cache", "error", err)
+			log.Error("Failed to initialize cache", zap.Error(err))
 		} else {
 			defer cacheClient.Close()
 			log.Info("Redis cache initialized")
@@ -70,7 +71,8 @@ func main() {
 	}
 
 	// Initialize circuit breaker
-	cb := circuitbreaker.NewCircuitBreaker()
+	_ = circuitbreaker.NewCircuitBreaker()
+	// TODO: Use circuit breaker in handlers when making external calls
 
 	// Initialize health checker
 	healthChecker := health.NewHealthChecker()
@@ -202,9 +204,9 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Info("API Gateway started", "port", port)
+		log.Info("API Gateway started", zap.String("port", port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal("Failed to start server", "error", err)
+			log.Fatal("Failed to start server", zap.Error(err))
 		}
 	}()
 
@@ -220,18 +222,18 @@ func main() {
 
 	// Shutdown HTTP server
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Error("Server forced to shutdown", "error", err)
+		log.Error("Server forced to shutdown", zap.Error(err))
 	}
 
 	// Close gRPC connections
 	if err := authClient.Close(); err != nil {
-		log.Error("Failed to close auth client", "error", err)
+		log.Error("Failed to close auth client", zap.Error(err))
 	}
 	if err := userClient.Close(); err != nil {
-		log.Error("Failed to close user client", "error", err)
+		log.Error("Failed to close user client", zap.Error(err))
 	}
 	if err := tenantClient.Close(); err != nil {
-		log.Error("Failed to close tenant client", "error", err)
+		log.Error("Failed to close tenant client", zap.Error(err))
 	}
 
 	log.Info("API Gateway stopped")

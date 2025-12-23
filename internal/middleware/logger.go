@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/longvhv/saas-framework-go/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // LoggerMiddleware logs HTTP requests
@@ -20,14 +21,14 @@ func LoggerMiddleware(log *logger.Logger) gin.HandlerFunc {
 		latency := end.Sub(start)
 
 		log.Info("HTTP Request",
-			"method", c.Request.Method,
-			"path", path,
-			"query", query,
-			"status", c.Writer.Status(),
-			"latency", latency.String(),
-			"ip", c.ClientIP(),
-			"user_agent", c.Request.UserAgent(),
-			"correlation_id", c.GetString("correlation_id"),
+			zap.String("method", c.Request.Method),
+			zap.String("path", path),
+			zap.String("query", query),
+			zap.Int("status", c.Writer.Status()),
+			zap.String("latency", latency.String()),
+			zap.String("ip", c.ClientIP()),
+			zap.String("user_agent", c.Request.UserAgent()),
+			zap.String("correlation_id", c.GetString("correlation_id")),
 		)
 	}
 }
