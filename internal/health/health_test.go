@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -202,7 +203,7 @@ func TestCheckAll_ConcurrentChecks(t *testing.T) {
 	
 	// Register multiple checks
 	for i := 0; i < 10; i++ {
-		name := "service-" + string(rune('0'+i))
+		name := "service-" + strconv.Itoa(i)
 		hc.RegisterCheck(name, func(ctx context.Context) error {
 			// Simulate some work
 			time.Sleep(10 * time.Millisecond)
