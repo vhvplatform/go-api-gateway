@@ -2,10 +2,10 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/longvhv/saas-framework-go/pkg/config"
-	"github.com/longvhv/saas-framework-go/pkg/logger"
-	pkgmiddleware "github.com/longvhv/saas-framework-go/pkg/middleware"
-	"github.com/longvhv/saas-framework-go/services/api-gateway/internal/handler"
+	"github.com/vhvcorp/go-shared/config"
+	"github.com/vhvcorp/go-shared/logger"
+	pkgmiddleware "github.com/vhvcorp/go-shared/middleware"
+	"github.com/vhvcorp/go-api-gateway/internal/handler"
 )
 
 // SetupRoutes configures all API routes

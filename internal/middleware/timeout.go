@@ -6,7 +6,7 @@ import (
 "time"
 
 "github.com/gin-gonic/gin"
-"github.com/longvhv/saas-framework-go/services/api-gateway/internal/errors"
+"github.com/vhvcorp/go-api-gateway/internal/errors"
 )
 
 // TimeoutMiddleware adds a timeout to requests

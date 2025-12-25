@@ -54,12 +54,12 @@ jobs:
         run: |
           kubectl set image deployment/${{ github.event.repository.name }} \
             ${{ github.event.repository.name }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev \
-            -n saas-framework-dev
-          kubectl rollout status deployment/${{ github.event.repository.name }} -n saas-framework-dev
+            -n vhvcorp-dev
+          kubectl rollout status deployment/${{ github.event.repository.name }} -n vhvcorp-dev
 
       - name: Verify deployment
         run: |
-          kubectl get pods -n saas-framework-dev -l app=${{ github.event.repository.name }}
+          kubectl get pods -n vhvcorp-dev -l app=${{ github.event.repository.name }}
 
       - name: Notify Slack
         uses: 8398a7/action-slack@v3

@@ -1,24 +1,5 @@
 
-// ============================================================================
-// MIGRATION NOTE: Multi-Repo Extraction
-// ============================================================================
-// When extracting this service to a separate repository:
-// 1. Update module path to: github.com/longvhv/saas-api-gateway
-// 2. Replace local pkg dependency with: github.com/longvhv/saas-shared-go v0.1.0
-// 3. Remove all replace directives pointing to ../pkg
-// 4. Run: go mod tidy
-// 
-// Example transformation:
-//   Before: module github.com/longvhv/saas-framework-go/services/api-gateway
-//   After:  module github.com/longvhv/saas-api-gateway
-//
-//   Before: replace github.com/longvhv/saas-framework-go/pkg => ../../pkg
-//   After:  (remove replace directive)
-//           require github.com/longvhv/saas-shared-go v0.1.0
-//
-// See: docs/migration/services/api-gateway/EXTRACTION_GUIDE.md
-// ============================================================================
-module github.com/longvhv/saas-framework-go/services/api-gateway
+module github.com/vhvcorp/go-api-gateway
 
 go 1.24.0
 
@@ -30,7 +11,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
-	github.com/longvhv/saas-framework-go/pkg v0.0.0
+	github.com/vhvcorp/go-shared v0.1.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/sony/gobreaker v1.0.0
@@ -96,5 +77,3 @@ require (
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/longvhv/saas-framework-go/pkg => ../../pkg

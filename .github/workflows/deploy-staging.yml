@@ -37,8 +37,8 @@ jobs:
         run: |
           kubectl set image deployment/${{ github.event.repository.name }} \
             ${{ github.event.repository.name }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }} \
-            -n saas-framework-staging
-          kubectl rollout status deployment/${{ github.event.repository.name }} -n saas-framework-staging
+            -n vhvcorp-staging
+          kubectl rollout status deployment/${{ github.event.repository.name }} -n vhvcorp-staging
 
       - name: Run smoke tests
         run: |

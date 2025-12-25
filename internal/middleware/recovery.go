@@ -4,8 +4,8 @@ import (
 "net/http"
 
 "github.com/gin-gonic/gin"
-"github.com/longvhv/saas-framework-go/pkg/logger"
-"github.com/longvhv/saas-framework-go/services/api-gateway/internal/errors"
+"github.com/vhvcorp/go-shared/logger"
+"github.com/vhvcorp/go-api-gateway/internal/errors"
 "go.uber.org/zap"
 )
 
