@@ -5,7 +5,7 @@ import (
 "time"
 
 "github.com/gin-gonic/gin"
-"github.com/longvhv/saas-framework-go/services/api-gateway/internal/metrics"
+"github.com/vhvcorp/go-api-gateway/internal/metrics"
 )
 
 // MetricsMiddleware collects Prometheus metrics for requests
