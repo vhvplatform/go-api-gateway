@@ -1,0 +1,185 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - API_GATEWAY_PORT=8080
+      - AUTH_SERVICE_URL=auth-service:50051
+      - USER_SERVICE_URL=user-service:50052
+      - TENANT_SERVICE_URL=tenant-service:50053
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8084
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=your-secret-key-change-in-production
+      - ENABLE_TRACING=true
+      - JAEGER_URL=http://jaeger:14268/api/traces
+      - ENABLE_METRICS=true
+      - RATE_LIMIT_RPS=100
+      - RATE_LIMIT_BURST=200
+      - MAX_REQUEST_SIZE=10485760
+      - CIRCUIT_BREAKER_ENABLED=true
+    depends_on:
+      - redis
+      - jaeger
+      - prometheus
+    networks:
+      - api-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - api-network
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB (for backend services)
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - api-network
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Jaeger (Distributed Tracing)
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # Collector
+      - "14250:14250"
+      - "9411:9411"
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    networks:
+      - api-network
+
+  # Prometheus (Metrics)
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - api-network
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:10.2.3
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - api-network
+    depends_on:
+      - prometheus
+
+  # Mock Auth Service (for testing)
+  # Replace with your actual auth service
+  # auth-service:
+  #   image: your-auth-service:latest
+  #   ports:
+  #     - "50051:50051"
+  #   environment:
+  #     - GRPC_PORT=50051
+  #     - MONGODB_URI=mongodb://admin:password@mongodb:27017/auth?authSource=admin
+  #     - JWT_SECRET=your-secret-key-change-in-production
+  #   networks:
+  #     - api-network
+  #   depends_on:
+  #     - mongodb
+
+  # Mock User Service (for testing)
+  # user-service:
+  #   image: your-user-service:latest
+  #   ports:
+  #     - "50052:50052"
+  #   environment:
+  #     - GRPC_PORT=50052
+  #     - MONGODB_URI=mongodb://admin:password@mongodb:27017/users?authSource=admin
+  #   networks:
+  #     - api-network
+  #   depends_on:
+  #     - mongodb
+
+  # Mock Tenant Service (for testing)
+  # tenant-service:
+  #   image: your-tenant-service:latest
+  #   ports:
+  #     - "50053:50053"
+  #   environment:
+  #     - GRPC_PORT=50053
+  #     - MONGODB_URI=mongodb://admin:password@mongodb:27017/tenants?authSource=admin
+  #   networks:
+  #     - api-network
+  #   depends_on:
+  #     - mongodb
+
+  # Mock Notification Service (for testing)
+  # notification-service:
+  #   image: your-notification-service:latest
+  #   ports:
+  #     - "8084:8084"
+  #   environment:
+  #     - HTTP_PORT=8084
+  #     - MONGODB_URI=mongodb://admin:password@mongodb:27017/notifications?authSource=admin
+  #   networks:
+  #     - api-network
+  #   depends_on:
+  #     - mongodb
+
+networks:
+  api-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  mongo-data:
+  prometheus-data:
+  grafana-data:

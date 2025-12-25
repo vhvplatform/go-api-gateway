@@ -1,0 +1,263 @@
+@startuml Request Flow Diagram
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+title HTTP Request Lifecycle Through API Gateway
+
+actor "Client" as client
+participant "Gin Router" as router
+participant "Recovery\nMiddleware" as recovery
+participant "Correlation ID\nMiddleware" as correlationid
+participant "Logger\nMiddleware" as logger
+participant "Metrics\nMiddleware" as metrics
+participant "Compression\nMiddleware" as compression
+participant "Validation\nMiddleware" as validation
+participant "Size Limit\nMiddleware" as sizelimit
+participant "Timeout\nMiddleware" as timeout
+participant "CORS\nMiddleware" as cors
+participant "Rate Limiter\nMiddleware" as ratelimiter
+participant "Auth\nMiddleware" as auth
+participant "Handler" as handler
+participant "Circuit Breaker" as breaker
+participant "Cache" as cache
+participant "Backend Service" as backend
+database "Redis" as redis
+
+== Request Phase ==
+
+client -> router : HTTP Request
+activate router
+
+router -> recovery : Request
+activate recovery
+note right
+  Wraps entire flow
+  Catches panics
+end note
+
+recovery -> correlationid : Request
+activate correlationid
+correlationid -> correlationid : Generate X-Correlation-ID
+note right
+  Adds unique ID to request
+  Used for distributed tracing
+end note
+
+correlationid -> logger : Request + Correlation ID
+activate logger
+logger -> logger : Log request details
+note right
+  Logs: method, path, IP, 
+  headers, correlation ID
+end note
+
+logger -> metrics : Request
+activate metrics
+metrics -> metrics : Start timer\nIncrement active requests
+note right
+  Track request count,
+  duration, active requests
+end note
+
+metrics -> compression : Request
+activate compression
+compression -> compression : Prepare gzip writer
+note right
+  Set up response compression
+end note
+
+compression -> validation : Request
+activate validation
+validation -> validation : Validate Content-Type\nValidate headers
+alt Invalid Request
+    validation --> client : 400 Bad Request
+    deactivate validation
+    deactivate compression
+    deactivate metrics
+    deactivate logger
+    deactivate correlationid
+    deactivate recovery
+    deactivate router
+else Valid Request
+    
+    validation -> sizelimit : Request
+    activate sizelimit
+    sizelimit -> sizelimit : Check request size
+    alt Request Too Large
+        sizelimit --> client : 413 Request Entity Too Large
+        deactivate sizelimit
+        deactivate validation
+        deactivate compression
+        deactivate metrics
+        deactivate logger
+        deactivate correlationid
+        deactivate recovery
+        deactivate router
+    else Size OK
+        
+        sizelimit -> timeout : Request
+        activate timeout
+        timeout -> timeout : Create timeout context\n(30 seconds)
+        
+        timeout -> cors : Request
+        activate cors
+        cors -> cors : Check CORS headers\nSet CORS response headers
+        
+        cors -> ratelimiter : Request
+        activate ratelimiter
+        ratelimiter -> ratelimiter : Get rate limiter for IP
+        ratelimiter -> ratelimiter : Check rate limit
+        alt Rate Limit Exceeded
+            ratelimiter --> client : 429 Too Many Requests
+            deactivate ratelimiter
+            deactivate cors
+            deactivate timeout
+            deactivate sizelimit
+            deactivate validation
+            deactivate compression
+            deactivate metrics
+            deactivate logger
+            deactivate correlationid
+            deactivate recovery
+            deactivate router
+        else Rate Limit OK
+            
+            ratelimiter -> auth : Request
+            activate auth
+            auth -> auth : Extract JWT token\nValidate token
+            alt Invalid Token (Protected Route)
+                auth --> client : 401 Unauthorized
+                deactivate auth
+                deactivate ratelimiter
+                deactivate cors
+                deactivate timeout
+                deactivate sizelimit
+                deactivate validation
+                deactivate compression
+                deactivate metrics
+                deactivate logger
+                deactivate correlationid
+                deactivate recovery
+                deactivate router
+            else Valid Token or Public Route
+                
+                auth -> handler : Request + Context
+                activate handler
+                handler -> handler : Extract request data
+                
+                == Backend Communication ==
+                
+                handler -> breaker : Execute with circuit breaker
+                activate breaker
+                breaker -> breaker : Check circuit state
+                alt Circuit Open
+                    breaker --> handler : 503 Service Unavailable
+                    handler --> client : 503 Service Unavailable
+                    deactivate breaker
+                    deactivate handler
+                    deactivate auth
+                    deactivate ratelimiter
+                    deactivate cors
+                    deactivate timeout
+                    deactivate sizelimit
+                    deactivate validation
+                    deactivate compression
+                    deactivate metrics
+                    deactivate logger
+                    deactivate correlationid
+                    deactivate recovery
+                    deactivate router
+                else Circuit Closed/Half-Open
+                    
+                    breaker -> cache : Check cache
+                    activate cache
+                    cache -> redis : GET cached response
+                    activate redis
+                    
+                    alt Cache Hit
+                        redis --> cache : Cached data
+                        cache --> breaker : Cached response
+                        breaker --> handler : Response from cache
+                    else Cache Miss
+                        redis --> cache : Cache miss
+                        deactivate redis
+                        
+                        cache -> backend : Forward request (gRPC/HTTP)
+                        activate backend
+                        backend -> backend : Process request
+                        backend --> cache : Response
+                        deactivate backend
+                        
+                        cache -> cache : Store in cache
+                        cache -> redis : SET response (with TTL)
+                        activate redis
+                        redis --> cache : OK
+                        deactivate redis
+                        
+                        cache --> breaker : Response
+                        breaker --> handler : Response
+                    end
+                    
+                    deactivate cache
+                    deactivate breaker
+                    
+                    == Response Phase ==
+                    
+                    handler -> handler : Format response
+                    handler --> auth : Response
+                    deactivate handler
+                    
+                    auth --> ratelimiter : Response
+                    deactivate auth
+                    
+                    ratelimiter --> cors : Response
+                    deactivate ratelimiter
+                    
+                    cors --> timeout : Response
+                    deactivate cors
+                    
+                    timeout --> sizelimit : Response
+                    deactivate timeout
+                    
+                    sizelimit --> validation : Response
+                    deactivate sizelimit
+                    
+                    validation --> compression : Response
+                    deactivate validation
+                    
+                    compression -> compression : Compress response (gzip)
+                    compression --> metrics : Compressed response
+                    deactivate compression
+                    
+                    metrics -> metrics : Stop timer\nDecrement active requests\nRecord metrics
+                    note right
+                      Record: status code,
+                      duration, endpoint
+                    end note
+                    metrics --> logger : Response
+                    deactivate metrics
+                    
+                    logger -> logger : Log response details
+                    note right
+                      Logs: status, duration,
+                      response size, correlation ID
+                    end note
+                    logger --> correlationid : Response
+                    deactivate logger
+                    
+                    correlationid --> recovery : Response
+                    deactivate correlationid
+                    
+                    recovery --> router : Response
+                    deactivate recovery
+                    
+                    router --> client : HTTP Response
+                    deactivate router
+                end
+            end
+        end
+    end
+end
+
+@enduml

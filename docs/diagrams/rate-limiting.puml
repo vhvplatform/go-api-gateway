@@ -1,0 +1,256 @@
+@startuml Rate Limiting Mechanism
+!theme plain
+
+title Rate Limiting & Throttling Mechanism
+
+participant "Client 1\n(IP: 192.168.1.100)" as client1
+participant "Client 2\n(IP: 192.168.1.101)" as client2
+participant "Client 3\n(Same IP: 192.168.1.100)" as client3
+participant "API Gateway" as gateway
+participant "Rate Limiter\nMiddleware" as ratelimiter
+participant "Rate Limiter\nManager" as manager
+participant "Token Bucket\nAlgorithm" as bucket
+participant "Cleanup\nGoroutine" as cleanup
+participant "Backend Service" as backend
+
+== Initialization ==
+
+gateway -> ratelimiter : Initialize
+activate ratelimiter
+ratelimiter -> manager : Create Rate Limiter Manager
+activate manager
+manager -> manager : Set default limits:\nRPS = 100\nBurst = 200
+note right
+  Configuration from env vars:
+  - RATE_LIMIT_RPS: requests per second
+  - RATE_LIMIT_BURST: max burst capacity
+  
+  Per-IP rate limiting ensures fair usage
+end note
+
+manager -> cleanup : Start cleanup goroutine
+activate cleanup
+note right
+  Runs every 10 minutes
+  Removes inactive limiters
+  (last access > 10 minutes)
+end note
+
+== Request Flow with Rate Limiting ==
+
+client1 -> gateway : Request 1
+activate gateway
+gateway -> ratelimiter : Process request
+ratelimiter -> manager : GetLimiter("192.168.1.100")
+activate manager
+
+manager -> manager : Check if limiter exists\nfor this IP
+alt Limiter Not Found
+    manager -> bucket : Create new Token Bucket\nrate=100 RPS, burst=200
+    activate bucket
+    note right
+      Token Bucket Algorithm:
+      - Bucket fills at steady rate (100 tokens/sec)
+      - Max capacity is burst size (200 tokens)
+      - Each request consumes 1 token
+      - Requests block/fail if no tokens available
+    end note
+    bucket --> manager : New limiter created
+    manager -> manager : Store limiter:\nkey="192.168.1.100"\nvalue={limiter, timestamp}
+else Limiter Exists
+    manager -> manager : Update last access time
+end
+
+manager --> ratelimiter : Limiter for IP
+deactivate manager
+
+ratelimiter -> bucket : Allow() - consume 1 token
+bucket -> bucket : Check if token available\nin bucket
+alt Token Available
+    bucket -> bucket : Consume token\n(bucket: 199 tokens)
+    bucket --> ratelimiter : Allowed
+    ratelimiter -> gateway : Request allowed
+    deactivate bucket
+    gateway -> backend : Forward request
+    activate backend
+    backend --> gateway : Response
+    deactivate backend
+    gateway --> client1 : 200 OK
+    deactivate gateway
+else No Token Available
+    bucket --> ratelimiter : Rate limit exceeded
+    deactivate bucket
+    ratelimiter --> gateway : 429 Too Many Requests
+    gateway --> client1 : 429 Too Many Requests\nRetry-After: 1
+    note right
+      Response includes:
+      - Status: 429
+      - Retry-After header
+      - Error message
+    end note
+    deactivate gateway
+end
+
+== Concurrent Requests from Same IP ==
+
+par Request from Client 1
+    client1 -> gateway : Request 2
+    activate gateway
+    gateway -> ratelimiter : Process
+    ratelimiter -> manager : GetLimiter("192.168.1.100")
+    activate manager
+    manager -> manager : Return existing limiter
+    manager --> ratelimiter : Limiter
+    deactivate manager
+    ratelimiter -> bucket : Allow()
+    activate bucket
+    bucket -> bucket : Consume token (198 tokens)
+    bucket --> ratelimiter : Allowed
+    deactivate bucket
+    ratelimiter -> gateway : Continue
+    gateway -> backend : Forward
+    activate backend
+    backend --> gateway : Response
+    deactivate backend
+    gateway --> client1 : 200 OK
+    deactivate gateway
+else Request from Client 3 (Same IP)
+    client3 -> gateway : Request 3
+    activate gateway
+    gateway -> ratelimiter : Process
+    ratelimiter -> manager : GetLimiter("192.168.1.100")
+    activate manager
+    manager -> manager : Same IP - return same limiter
+    manager --> ratelimiter : Same limiter
+    deactivate manager
+    ratelimiter -> bucket : Allow()
+    activate bucket
+    bucket -> bucket : Share same bucket\nConsume token (197 tokens)
+    note right
+      Same IP = Same rate limiter
+      Prevents abuse from single source
+    end note
+    bucket --> ratelimiter : Allowed
+    deactivate bucket
+    ratelimiter -> gateway : Continue
+    gateway -> backend : Forward
+    activate backend
+    backend --> gateway : Response
+    deactivate backend
+    gateway --> client3 : 200 OK
+    deactivate gateway
+end
+
+== Different IP - Independent Limiting ==
+
+client2 -> gateway : Request from different IP
+activate gateway
+gateway -> ratelimiter : Process
+ratelimiter -> manager : GetLimiter("192.168.1.101")
+activate manager
+manager -> bucket : Create new bucket for this IP\n(independent rate limit)
+activate bucket
+note right
+  Each IP has independent:
+  - Token bucket
+  - Rate limit counter
+  - Last access timestamp
+end note
+bucket --> manager : New limiter
+manager --> ratelimiter : Limiter for new IP
+deactivate manager
+ratelimiter -> bucket : Allow()
+bucket -> bucket : Full bucket (200 tokens)\nConsume 1 token
+bucket --> ratelimiter : Allowed
+deactivate bucket
+ratelimiter -> gateway : Continue
+gateway -> backend : Forward
+activate backend
+backend --> gateway : Response
+deactivate backend
+gateway --> client2 : 200 OK
+deactivate gateway
+
+== Token Refill Over Time ==
+
+note over bucket
+  Token Bucket Refill Mechanism:
+  
+  Time: T+0s  -> Bucket: 200 tokens (full)
+  Time: T+1s  -> Bucket: 200 tokens (capped at burst)
+  
+  After consuming 100 tokens:
+  Time: T+0s  -> Bucket: 100 tokens
+  Time: T+1s  -> Bucket: 200 tokens (refilled 100 tokens at 100 RPS)
+  
+  Burst capacity allows short spikes:
+  - Can handle 200 requests instantly
+  - Then limited to 100 requests per second
+  - Bucket refills at steady rate
+end note
+
+== Cleanup Process ==
+
+cleanup -> cleanup : Every 10 minutes:\nScan all limiters
+activate cleanup
+cleanup -> manager : Iterate limiters
+activate manager
+manager -> manager : Check each limiter's\nlast access time
+
+alt Last Access > 10 minutes ago
+    manager -> manager : Remove inactive limiter\nfrom map
+    note right
+      Memory optimization:
+      - Prevents memory leak
+      - Removes limiters for inactive IPs
+      - Automatic garbage collection
+    end note
+else Recently Active
+    manager -> manager : Keep limiter
+end
+
+manager --> cleanup : Cleanup complete
+deactivate manager
+cleanup -> cleanup : Sleep 10 minutes
+deactivate cleanup
+
+== Per-Tenant Rate Limiting (Optional Enhancement) ==
+
+note over gateway, bucket
+  Optional: Per-Tenant Rate Limiting
+  
+  Instead of (or in addition to) per-IP:
+  - Extract tenant_id from JWT
+  - Apply rate limits per tenant
+  - Different limits for different tiers:
+    * Free tier: 100 RPS
+    * Pro tier: 1000 RPS
+    * Enterprise tier: 10000 RPS
+  
+  Implementation:
+  - Use tenant_id as limiter key
+  - Configure per-tenant limits
+  - Combine with per-IP for double protection
+end note
+
+== Rate Limiting Metrics ==
+
+note over manager
+  Prometheus Metrics Exported:
+  
+  - api_gateway_rate_limit_requests_total
+    * Labels: ip, allowed/denied
+  
+  - api_gateway_rate_limit_active_limiters
+    * Number of active rate limiters
+  
+  - api_gateway_rate_limit_dropped_requests_total
+    * Requests blocked by rate limiting
+  
+  Monitor these to:
+  - Detect abuse patterns
+  - Adjust rate limits
+  - Track system load
+end note
+
+@enduml

@@ -1,0 +1,289 @@
+@startuml Deployment Topology
+!theme plain
+
+title Production Deployment Topology
+
+cloud "Internet" as internet {
+}
+
+package "Load Balancer Layer" {
+    node "AWS ALB /\nNginx" as alb {
+        component "Load Balancer" as lb
+        component "SSL Termination" as ssl
+        component "Health Checks" as albhealth
+    }
+}
+
+package "API Gateway Cluster" {
+    node "Gateway Instance 1" as gw1 {
+        component "API Gateway" as api1
+        component "Port: 8080" as port1
+    }
+    
+    node "Gateway Instance 2" as gw2 {
+        component "API Gateway" as api2
+        component "Port: 8080" as port2
+    }
+    
+    node "Gateway Instance 3" as gw3 {
+        component "API Gateway" as api3
+        component "Port: 8080" as port3
+    }
+}
+
+package "Backend Microservices" {
+    node "Auth Service Cluster" {
+        component "Auth Service 1" as auth1
+        component "Auth Service 2" as auth2
+        database "gRPC: 50051" as authgrpc
+    }
+    
+    node "User Service Cluster" {
+        component "User Service 1" as user1
+        component "User Service 2" as user2
+        database "gRPC: 50052" as usergrpc
+    }
+    
+    node "Tenant Service Cluster" {
+        component "Tenant Service 1" as tenant1
+        component "Tenant Service 2" as tenant2
+        database "gRPC: 50053" as tenantgrpc
+    }
+    
+    node "Notification Service" {
+        component "Notification Service" as notif
+        database "HTTP: 8084" as notifhttp
+    }
+}
+
+package "Data Layer" {
+    database "MongoDB\nReplica Set" as mongodb {
+        storage "Primary" as mongo_primary
+        storage "Secondary 1" as mongo_sec1
+        storage "Secondary 2" as mongo_sec2
+    }
+    
+    database "Redis\nCluster" as redis {
+        storage "Master" as redis_master
+        storage "Replica 1" as redis_rep1
+        storage "Replica 2" as redis_rep2
+    }
+}
+
+package "Observability Stack" {
+    node "Monitoring" {
+        component "Prometheus" as prometheus
+        component "Grafana" as grafana
+        component "Alert Manager" as alertmanager
+    }
+    
+    node "Tracing" {
+        component "Jaeger" as jaeger
+        component "Jaeger Collector" as jaeger_collector
+        component "Jaeger Query" as jaeger_query
+        storage "Trace Storage" as trace_storage
+    }
+    
+    node "Logging" {
+        component "Elasticsearch" as elasticsearch
+        component "Logstash" as logstash
+        component "Kibana" as kibana
+    }
+}
+
+package "Message Queue" {
+    node "RabbitMQ\nCluster" as rabbitmq {
+        component "RabbitMQ Node 1" as rabbit1
+        component "RabbitMQ Node 2" as rabbit2
+    }
+}
+
+' Internet connections
+internet --> ssl : HTTPS\n(443)
+ssl --> lb : HTTP\n(internal)
+
+' Load balancer to gateways
+lb --> api1 : Round-robin
+lb --> api2 : Round-robin
+lb --> api3 : Round-robin
+
+' Health checks
+albhealth ..> api1 : GET /health
+albhealth ..> api2 : GET /health
+albhealth ..> api3 : GET /health
+
+' API Gateway to Backend Services
+api1 --> auth1 : gRPC
+api1 --> auth2
+api1 --> user1 : gRPC
+api1 --> user2
+api1 --> tenant1 : gRPC
+api1 --> tenant2
+api1 --> notif : HTTP
+
+api2 --> auth1 : gRPC
+api2 --> auth2
+api2 --> user1 : gRPC
+api2 --> user2
+api2 --> tenant1 : gRPC
+api2 --> tenant2
+api2 --> notif : HTTP
+
+api3 --> auth1 : gRPC
+api3 --> auth2
+api3 --> user1 : gRPC
+api3 --> user2
+api3 --> tenant1 : gRPC
+api3 --> tenant2
+api3 --> notif : HTTP
+
+' Backend to Data Layer
+auth1 --> mongo_primary : Read/Write
+auth2 --> mongo_primary
+user1 --> mongo_primary
+user2 --> mongo_primary
+tenant1 --> mongo_primary
+tenant2 --> mongo_primary
+notif --> mongo_primary
+
+' MongoDB Replication
+mongo_primary ..> mongo_sec1 : Replicate
+mongo_primary ..> mongo_sec2 : Replicate
+
+' API Gateway to Redis
+api1 --> redis_master : Cache
+api2 --> redis_master
+api3 --> redis_master
+
+' Redis Replication
+redis_master ..> redis_rep1 : Replicate
+redis_master ..> redis_rep2 : Replicate
+
+' Backend to Message Queue
+auth1 --> rabbit1 : Publish Events
+auth2 --> rabbit1
+user1 --> rabbit1
+user2 --> rabbit1
+tenant1 --> rabbit1
+tenant2 --> rabbit1
+
+rabbit1 ..> rabbit2 : Cluster
+notif --> rabbit1 : Consume Events
+
+' Observability: Metrics
+api1 ..> prometheus : /metrics (pull)
+api2 ..> prometheus
+api3 ..> prometheus
+auth1 ..> prometheus
+auth2 ..> prometheus
+user1 ..> prometheus
+user2 ..> prometheus
+tenant1 ..> prometheus
+tenant2 ..> prometheus
+notif ..> prometheus
+
+prometheus --> grafana : Query metrics
+prometheus --> alertmanager : Send alerts
+
+' Observability: Tracing
+api1 ..> jaeger_collector : Push traces
+api2 ..> jaeger_collector
+api3 ..> jaeger_collector
+auth1 ..> jaeger_collector
+auth2 ..> jaeger_collector
+user1 ..> jaeger_collector
+user2 ..> jaeger_collector
+
+jaeger_collector --> trace_storage : Store
+trace_storage --> jaeger_query : Query
+jaeger_query --> jaeger : Display
+
+' Observability: Logging
+api1 ..> logstash : Ship logs
+api2 ..> logstash
+api3 ..> logstash
+auth1 ..> logstash
+auth2 ..> logstash
+user1 ..> logstash
+user2 ..> logstash
+
+logstash --> elasticsearch : Index logs
+elasticsearch --> kibana : Query logs
+
+note right of alb
+  **Load Balancer Configuration:**
+  - SSL/TLS termination
+  - Health check: /health endpoint
+  - Connection draining: 30s
+  - Sticky sessions: Optional
+  - Rate limiting: Optional
+  - DDoS protection
+end note
+
+note right of gw1
+  **API Gateway Configuration:**
+  - Horizontal scaling (3+ instances)
+  - Auto-scaling based on CPU/Memory
+  - Rolling deployment strategy
+  - Graceful shutdown (30s)
+  - Connection pooling to backends
+  - Circuit breaker per service
+  - Redis cache for responses
+end note
+
+note right of mongodb
+  **MongoDB Replica Set:**
+  - 3 nodes (1 primary, 2 secondaries)
+  - Automatic failover
+  - Read preference: Primary
+  - Write concern: Majority
+  - Backup: Daily snapshots
+end note
+
+note right of redis
+  **Redis Cluster:**
+  - Master-replica replication
+  - Automatic failover (Sentinel)
+  - TTL-based expiration
+  - Memory: 4GB per node
+  - Persistence: RDB + AOF
+end note
+
+note right of prometheus
+  **Monitoring Stack:**
+  - Prometheus: Metrics collection
+  - Grafana: Visualization
+  - AlertManager: Alert routing
+  - Retention: 30 days
+  - Scrape interval: 15s
+end note
+
+note bottom of rabbitmq
+  **Message Queue:**
+  - Clustered for HA
+  - Mirrored queues
+  - Persistent messages
+  - Dead letter queue
+  - Event-driven communication
+end note
+
+' Deployment Zones (Optional)
+together {
+    gw1
+    gw2
+    gw3
+}
+
+together {
+    auth1
+    user1
+    tenant1
+}
+
+together {
+    auth2
+    user2
+    tenant2
+}
+
+@enduml

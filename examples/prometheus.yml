@@ -1,0 +1,50 @@
+# Prometheus configuration for API Gateway monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'api-gateway-local'
+    environment: 'development'
+
+scrape_configs:
+  # API Gateway metrics
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          service: 'api-gateway'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Add your backend services here
+  # - job_name: 'auth-service'
+  #   static_configs:
+  #     - targets: ['auth-service:8081']
+  #       labels:
+  #         service: 'auth-service'
+
+  # - job_name: 'user-service'
+  #   static_configs:
+  #     - targets: ['user-service:8082']
+  #       labels:
+  #         service: 'user-service'
+
+  # - job_name: 'tenant-service'
+  #   static_configs:
+  #     - targets: ['tenant-service:8083']
+  #       labels:
+  #         service: 'tenant-service'
+
+  # - job_name: 'notification-service'
+  #   static_configs:
+  #     - targets: ['notification-service:8084']
+  #       labels:
+  #         service: 'notification-service'
