@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/vhvplatform/go-api-gateway/internal/client"
-	"github.com/vhvplatform/go-shared/logger"
+	"github.com/vhvcorp/go-shared/logger"
 )
 
 // TenantHandler handles tenant-related requests

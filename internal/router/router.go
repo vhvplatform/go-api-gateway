@@ -3,9 +3,9 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/vhvplatform/go-api-gateway/internal/handler"
-	"github.com/vhvplatform/go-shared/config"
-	"github.com/vhvplatform/go-shared/logger"
-	pkgmiddleware "github.com/vhvplatform/go-shared/middleware"
+	"github.com/vhvcorp/go-shared/config"
+	"github.com/vhvcorp/go-shared/logger"
+	pkgmiddleware "github.com/vhvcorp/go-shared/middleware"
 )
 
 // SetupRoutes configures all API routes
