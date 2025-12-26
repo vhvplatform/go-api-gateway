@@ -14,10 +14,12 @@ COPY . .
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/main.go
 
-# Final stage
+# Runtime stage
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates
+# Install ca-certificates for HTTPS connections
+# Alpine does not include CA certificates by default
+RUN apk --no-cache add ca-certificates || true
 
 WORKDIR /root/
 

@@ -2,6 +2,8 @@
 
 Production-ready API Gateway with advanced features including circuit breaker, rate limiting, distributed tracing, and comprehensive monitoring.
 
+This service follows the architectural standards defined in [go-infrastructure](https://github.com/vhvplatform/go-infrastructure).
+
 [![Go Version](https://img.shields.io/badge/Go-1.25.5-blue.svg)](https://go.dev/)
 [![Test Coverage](https://img.shields.io/badge/coverage-96.4%25-brightgreen.svg)](./coverage.txt)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -19,14 +21,17 @@ Production-ready API Gateway with advanced features including circuit breaker, r
 - [Testing](#testing)
 - [Security](#security)
 - [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
 
 ## Documentation
 
 ### Quick Links
+- **[Contributing Guide](CONTRIBUTING.md)** - Development and contribution guidelines
 - **[Troubleshooting Guide](TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Architecture Diagrams](docs/diagrams/)** - Visual system architecture (PlantUML)
 - **[Examples](examples/)** - Usage examples and Docker Compose setup
 - **[API Documentation](docs/api/)** - OpenAPI/Swagger specs
+- **[go-infrastructure](https://github.com/vhvplatform/go-infrastructure)** - Infrastructure standards and deployment
 
 ### Diagrams
 Comprehensive PlantUML diagrams documenting the system:
@@ -180,21 +185,94 @@ All application routes are prefixed with `/api/v1`:
 
 ## Building & Running
 
-### Build
+This project follows the [go-infrastructure](https://github.com/vhvplatform/go-infrastructure) architectural standards for building, testing, and deployment.
+
+### Prerequisites
+
+- Go 1.25.5 or later
+- Docker (for containerization)
+- Make (for build automation)
+- kubectl (for Kubernetes deployment)
+
+### Quick Start with Makefile
+
 ```bash
-cd services/api-gateway
-go build -o api-gateway ./cmd/main.go
+# Show all available targets
+make help
+
+# Download dependencies
+make deps
+
+# Build the application
+make build
+
+# Run tests
+make test
+
+# Run all validation (fmt, vet, lint, test)
+make validate
+
+# Build Docker image
+make docker-build
+```
+
+### Build
+
+```bash
+# Using Makefile (recommended)
+make build
+
+# Or using go directly
+go build -o bin/api-gateway ./cmd/main.go
 ```
 
 ### Run
+
 ```bash
-./api-gateway
+# Using Makefile
+make run
+
+# Or run the binary directly
+./bin/api-gateway
 ```
 
 ### Docker
+
 ```bash
-docker build -f services/api-gateway/Dockerfile -t api-gateway .
-docker run -p 8080:8080 --env-file .env api-gateway
+# Build Docker image
+make docker-build
+
+# Or using docker directly
+docker build -t api-gateway:latest .
+
+# Run Docker container
+docker run -p 8080:8080 --env-file .env api-gateway:latest
+```
+
+### Testing
+
+```bash
+# Run all tests
+make test
+
+# Run tests with coverage report
+make test-coverage
+
+# Check coverage meets threshold (80%)
+make test-coverage-check
+
+# Run linter
+make lint
+```
+
+### Development Workflow
+
+```bash
+# Format, vet, lint, test, and build
+make validate
+
+# Run local CI pipeline
+make ci
 ```
 
 ## Architecture
@@ -284,16 +362,34 @@ Structured JSON logs include:
 
 ## Testing
 
+The project maintains >96% test coverage with comprehensive unit tests. See [CONTRIBUTING.md](CONTRIBUTING.md) for testing guidelines.
+
 ```bash
-# Run unit tests
-go test ./internal/middleware/...
+# Run all tests with Makefile (recommended)
+make test
 
-# Run with coverage
-go test -cover ./...
+# Run tests with coverage report
+make test-coverage
 
-# Run integration tests
-go test ./tests/integration/...
+# Check coverage threshold (80%)
+make test-coverage-check
+
+# View coverage in browser
+make test-coverage
+open coverage.html
+
+# Run specific package tests
+go test -v ./internal/circuitbreaker
+go test -v ./internal/health
+go test -v ./internal/errors
+
+# Run with race detector
+go test -race ./...
 ```
+
+**Test Coverage**: 96.4% of statements
+
+See the [Testing section in CONTRIBUTING.md](CONTRIBUTING.md#testing) for detailed testing guidelines.
 
 ## Security
 
@@ -339,6 +435,8 @@ For detailed troubleshooting information, see [TROUBLESHOOTING.md](TROUBLESHOOTI
 
 ## Development
 
+This project follows the architectural standards defined in [go-infrastructure](https://github.com/vhvplatform/go-infrastructure). Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) guide for detailed development guidelines.
+
 ### Project Structure
 
 ```
@@ -361,20 +459,27 @@ For detailed troubleshooting information, see [TROUBLESHOOTING.md](TROUBLESHOOTI
 │   └── api/                 # API documentation
 ├── examples/                # Usage examples
 ├── Dockerfile               # Container image
+├── Makefile                 # Build automation
 ├── go.mod                   # Go dependencies
+├── CONTRIBUTING.md          # Contribution guidelines
 └── README.md               # This file
 ```
 
 ### Testing
 
 ```bash
-# Run all tests
-go test ./...
+# Run all tests (recommended - uses Makefile)
+make test
 
 # Run tests with coverage
-go test -coverprofile=coverage.txt -covermode=atomic ./...
+make test-coverage
 
-# View coverage report
+# Check coverage threshold
+make test-coverage-check
+
+# Or use go directly
+go test ./...
+go test -coverprofile=coverage.txt -covermode=atomic ./...
 go tool cover -html=coverage.txt
 
 # Run specific package tests
@@ -409,16 +514,37 @@ The codebase follows Go best practices:
 
 ## Contributing
 
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- Development setup and workflow
+- Coding standards and best practices
+- Testing requirements (minimum 80% coverage)
+- Pull request process
+- Code review guidelines
+
+### Quick Contribution Steps
+
 1. Fork the repository
-2. Create a feature branch
-3. Write tests for your changes
-4. Ensure all tests pass
-5. Update documentation
-6. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes following our [coding standards](CONTRIBUTING.md#coding-standards)
+4. Write tests for your changes (`make test`)
+5. Ensure all validation passes (`make validate`)
+6. Update documentation as needed
+7. Submit a pull request
+
+For detailed guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Changelog
 
-### v1.1.0 (Latest)
+### v1.2.0 (Latest)
+- 🏗️ **Architecture Alignment**: Aligned with [go-infrastructure](https://github.com/vhvplatform/go-infrastructure) standards
+- 🔨 **Build System**: Added comprehensive Makefile with 20+ targets
+- 📝 **Documentation**: Added CONTRIBUTING.md with detailed development guidelines
+- 🐳 **Docker**: Enhanced Dockerfile with multi-stage build and CA certificates
+- 🎯 **Build Automation**: Standardized build, test, and deployment processes
+- 📦 **Project Structure**: Added .dockerignore and .gitignore for cleaner builds
+
+### v1.1.0
 - ✨ Upgraded to Go 1.25.5 (latest stable)
 - 📝 Added comprehensive documentation (diagrams, examples, troubleshooting)
 - ✅ Achieved 96.4% test coverage with comprehensive unit tests
