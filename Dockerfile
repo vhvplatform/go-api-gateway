@@ -1,5 +1,8 @@
 FROM golang:1.25.5-alpine AS builder
 
+# Install ca-certificates in builder stage
+RUN apk --no-cache add ca-certificates
+
 WORKDIR /app
 
 # Copy go mod files
@@ -14,8 +17,8 @@ COPY . .
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/main.go
 
-# Final stage
-FROM alpine:latest
+# Runtime stage
+FROM alpine:3.19
 
 RUN apk --no-cache add ca-certificates
 
