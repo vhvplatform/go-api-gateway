@@ -1,6 +1,6 @@
 module github.com/vhvplatform/go-api-gateway
 
-go 1.25.5
+go 1.23
 
 require (
 	github.com/gin-contrib/cors v1.7.2
@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.17.2
 	github.com/sony/gobreaker v1.0.0
-	github.com/vhvplatform/go-shared v0.0.0-20251225123226-c6e63922fc55
+	github.com/vhvcorp/go-shared v0.0.0-20251225123226-c6e63922fc55
 	go.opentelemetry.io/otel v1.33.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.17.0
 	go.opentelemetry.io/otel/sdk v1.33.0
