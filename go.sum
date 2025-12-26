@@ -172,8 +172,8 @@ github.com/twitchyliquid64/golang-asm v0.15.1 h1:SU5vSMR7hnwNxj24w34ZyCi/FmDZTkS
 github.com/twitchyliquid64/golang-asm v0.15.1/go.mod h1:a1lVb/DtPvCB8fslRZhAngC2+aY1QWCk3Cedj/Gdt08=
 github.com/ugorji/go/codec v1.3.1 h1:waO7eEiFDwidsBN6agj1vJQ4AG7lh2yqXyOXqhgQuyY=
 github.com/ugorji/go/codec v1.3.1/go.mod h1:pRBVtBSKl77K30Bv8R2P+cLSGaTtex6fsA2Wjqmfxj4=
-github.com/vhvplatform/go-shared v0.0.0-20251226025157-ff13dd803359 h1:xL/nC3eerljtuE+GiWOGPG+COyzueC9/wU/u/7gqh2M=
-github.com/vhvplatform/go-shared v0.0.0-20251226025157-ff13dd803359/go.mod h1:euh97TSTP2KNwstqovRlQ/jnzDofkW0BjXsSnf3nO7E=
+github.com/vhvplatform/go-shared v1.0.0 h1:zlXr5zt6EDga8oxoOuX7H6muYDPuxuqSqHJIjpw4x58=
+github.com/vhvplatform/go-shared v1.0.0/go.mod h1:euh97TSTP2KNwstqovRlQ/jnzDofkW0BjXsSnf3nO7E=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=

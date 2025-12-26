@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.17.2
 	github.com/sony/gobreaker v1.0.0
-	github.com/vhvplatform/go-shared v0.0.0-20251226025157-ff13dd803359
+	github.com/vhvplatform/go-shared v1.0.0
 	go.opentelemetry.io/otel v1.33.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.17.0
 	go.opentelemetry.io/otel/sdk v1.33.0
