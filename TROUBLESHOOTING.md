@@ -668,11 +668,11 @@ redis-cli -u $REDIS_URL --scan --pattern "cache:*" | xargs redis-cli DEL
 
 ```bash
 # Pull latest image
-docker pull ghcr.io/vhvcorp/go-api-gateway:latest
+docker pull ghcr.io/vhvplatform/go-api-gateway:latest
 
 # Rolling update
 kubectl set image deployment/api-gateway \
-  api-gateway=ghcr.io/vhvcorp/go-api-gateway:latest
+  api-gateway=ghcr.io/vhvplatform/go-api-gateway:latest
 
 # Monitor rollout
 kubectl rollout status deployment/api-gateway
@@ -683,4 +683,4 @@ kubectl rollout status deployment/api-gateway
 For more information, see:
 - [README.md](README.md) - General documentation
 - [Architecture Diagrams](docs/diagrams/) - System architecture
-- [GitHub Issues](https://github.com/vhvcorp/go-api-gateway/issues) - Known issues
+- [GitHub Issues](https://github.com/vhvplatform/go-api-gateway/issues) - Known issues

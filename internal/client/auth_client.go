@@ -5,7 +5,7 @@ import (
 	"time"
 
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	"github.com/vhvcorp/go-shared/logger"
+	"github.com/vhvplatform/go-shared/logger"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -13,8 +13,8 @@ import (
 
 // AuthClient handles communication with auth service
 type AuthClient struct {
-	conn   *grpc.ClientConn
-	log    *logger.Logger
+	conn *grpc.ClientConn
+	log  *logger.Logger
 	// client proto.AuthServiceClient // Uncomment when proto is generated
 }
 

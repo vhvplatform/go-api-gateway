@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vhvcorp/go-shared/jwt"
+	"github.com/vhvplatform/go-shared/jwt"
 )
 
 // AuthMiddleware validates JWT tokens

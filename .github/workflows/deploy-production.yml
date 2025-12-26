@@ -51,16 +51,16 @@ jobs:
           # Deploy to green environment
           kubectl set image deployment/${{ github.event.repository.name }}-green \
             ${{ github.event.repository.name }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }} \
-            -n vhvcorp-prod
+            -n vhvplatform-prod
 
           # Wait for rollout
-          kubectl rollout status deployment/${{ github.event.repository.name }}-green -n vhvcorp-prod
+          kubectl rollout status deployment/${{ github.event.repository.name }}-green -n vhvplatform-prod
 
           # Run health checks
           sleep 30
 
           # Switch traffic to green
-          kubectl patch service ${{ github.event.repository.name }} -n vhvcorp-prod \
+          kubectl patch service ${{ github.event.repository.name }} -n vhvplatform-prod \
             -p '{"spec":{"selector":{"version":"green"}}}'
 
           # Keep blue for rollback
@@ -92,5 +92,5 @@ jobs:
         if: failure()
         run: |
           echo "Rollback command:" > rollback.sh
-          echo "kubectl patch service ${{ github.event.repository.name }} -n vhvcorp-prod -p '{\"spec\":{\"selector\":{\"version\":\"blue\"}}}'" >> rollback.sh
+          echo "kubectl patch service ${{ github.event.repository.name }} -n vhvplatform-prod -p '{\"spec\":{\"selector\":{\"version\":\"blue\"}}}'" >> rollback.sh
           chmod +x rollback.sh

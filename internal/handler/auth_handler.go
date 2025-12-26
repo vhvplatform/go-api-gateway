@@ -1,15 +1,15 @@
 package handler
 
 import (
-"go.uber.org/zap"
 	"bytes"
 	"encoding/json"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vhvcorp/go-shared/logger"
-	"github.com/vhvcorp/go-api-gateway/internal/client"
+	"github.com/vhvplatform/go-api-gateway/internal/client"
+	"github.com/vhvplatform/go-shared/logger"
 )
 
 // AuthHandler handles auth-related requests

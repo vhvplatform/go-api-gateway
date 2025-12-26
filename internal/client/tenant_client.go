@@ -5,7 +5,7 @@ import (
 	"time"
 
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	"github.com/vhvcorp/go-shared/logger"
+	"github.com/vhvplatform/go-shared/logger"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -13,8 +13,8 @@ import (
 
 // TenantClient handles communication with tenant service
 type TenantClient struct {
-	conn   *grpc.ClientConn
-	log    *logger.Logger
+	conn *grpc.ClientConn
+	log  *logger.Logger
 	// client proto.TenantServiceClient // Uncomment when proto is generated
 }
 

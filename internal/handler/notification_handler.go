@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vhvcorp/go-shared/httpclient"
-	"github.com/vhvcorp/go-shared/logger"
+	"github.com/vhvplatform/go-shared/httpclient"
+	"github.com/vhvplatform/go-shared/logger"
 	"go.uber.org/zap"
 )
 
@@ -24,7 +24,7 @@ func NewNotificationHandler(baseURL string, log *logger.Logger) *NotificationHan
 		httpclient.WithRetry(3, 1),
 		httpclient.WithCircuitBreaker(),
 	)
-	
+
 	return &NotificationHandler{
 		baseURL: baseURL,
 		client:  client,
