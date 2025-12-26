@@ -21,9 +21,9 @@ import (
 	"github.com/vhvplatform/go-api-gateway/internal/health"
 	"github.com/vhvplatform/go-api-gateway/internal/router"
 	"github.com/vhvplatform/go-api-gateway/internal/tracing"
-	"github.com/vhvcorp/go-shared/config"
-	"github.com/vhvcorp/go-shared/logger"
-	pkgmiddleware "github.com/vhvcorp/go-shared/middleware"
+	"github.com/vhvplatform/go-shared/config"
+	"github.com/vhvplatform/go-shared/logger"
+	pkgmiddleware "github.com/vhvplatform/go-shared/middleware"
 	"go.uber.org/zap"
 )
 

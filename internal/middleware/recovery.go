@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/vhvplatform/go-api-gateway/internal/errors"
-	"github.com/vhvcorp/go-shared/logger"
+	"github.com/vhvplatform/go-shared/logger"
 	"go.uber.org/zap"
 )
 
