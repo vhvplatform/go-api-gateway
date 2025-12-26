@@ -60,7 +60,13 @@ clean: ## Clean build artifacts
 .PHONY: test
 test: ## Run tests
 	@echo "Running tests..."
-	$(GOTEST) -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+	@$(GOTEST) -v -race -coverprofile=coverage.txt -covermode=atomic ./... 2>&1 | tee test-output.log | grep -v "no such tool" || true
+	@if grep -q "FAIL" test-output.log; then \
+		echo "❌ Tests failed"; \
+		rm -f test-output.log; \
+		exit 1; \
+	fi
+	@rm -f test-output.log
 	@echo "Tests complete"
 
 .PHONY: test-coverage
@@ -77,7 +83,7 @@ test-coverage-check: test ## Check test coverage meets minimum threshold (80%)
 		echo "❌ Unable to calculate coverage"; \
 		exit 1; \
 	fi; \
-	if [ $$(echo "$$coverage < 80" | bc -l) -eq 1 ]; then \
+	if [ $$(echo "$$coverage" | awk '{print ($$1 < 80)}') -eq 1 ]; then \
 		echo "❌ Coverage $$coverage% is below 80%"; \
 		exit 1; \
 	else \
@@ -147,7 +153,14 @@ docker-push: ## Push Docker image to registry
 .PHONY: docker-run
 docker-run: ## Run Docker container locally
 	@echo "Running Docker container..."
-	docker run -p 8080:8080 --env-file .env.local $(DOCKER_IMAGE):$(DOCKER_TAG)
+	@if [ -f .env.local ]; then \
+		docker run -p 8080:8080 --env-file .env.local $(DOCKER_IMAGE):$(DOCKER_TAG); \
+	elif [ -f .env ]; then \
+		docker run -p 8080:8080 --env-file .env $(DOCKER_IMAGE):$(DOCKER_TAG); \
+	else \
+		echo "Warning: No .env or .env.local file found. Running without environment variables."; \
+		docker run -p 8080:8080 $(DOCKER_IMAGE):$(DOCKER_TAG); \
+	fi
 
 .PHONY: run
 run: ## Run the application locally

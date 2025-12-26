@@ -19,6 +19,7 @@ build/
 *.out
 coverage.txt
 coverage.html
+test-output.log
 
 # Dependency directories
 vendor/
