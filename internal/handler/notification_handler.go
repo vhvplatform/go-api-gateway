@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vhvplatform/go-shared/httpclient"
-	"github.com/vhvplatform/go-shared/logger"
+	"github.com/vhvcorp/go-shared/httpclient"
+	"github.com/vhvcorp/go-shared/logger"
 	"go.uber.org/zap"
 )
 
