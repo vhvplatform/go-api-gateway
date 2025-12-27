@@ -1,8 +1,10 @@
 package circuitbreaker
 
 import (
+	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/sony/gobreaker"
 )
@@ -213,4 +215,101 @@ func TestCircuitBreaker_Settings(t *testing.T) {
 	if breaker.State() != gobreaker.StateClosed {
 		t.Errorf("Initial state should be Closed, got %v", breaker.State())
 	}
+}
+
+func TestCircuitBreaker_Execute(t *testing.T) {
+	cb := NewCircuitBreaker()
+
+	t.Run("Successful execution", func(t *testing.T) {
+		result, err := cb.Execute("test-service", func() (interface{}, error) {
+			return "success", nil
+		})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if result != "success" {
+			t.Errorf("Expected 'success', got %v", result)
+		}
+	})
+
+	t.Run("Failed execution", func(t *testing.T) {
+		expectedErr := errors.New("test error")
+		result, err := cb.Execute("test-service-2", func() (interface{}, error) {
+			return nil, expectedErr
+		})
+		if err != expectedErr {
+			t.Errorf("Expected error %v, got %v", expectedErr, err)
+		}
+		if result != nil {
+			t.Errorf("Expected nil result, got %v", result)
+		}
+	})
+
+	t.Run("Circuit breaker trips after failures", func(t *testing.T) {
+		serviceName := "test-service-3"
+		
+		// Cause failures to trip the circuit
+		for i := 0; i < 10; i++ {
+			_, _ = cb.Execute(serviceName, func() (interface{}, error) {
+				return nil, errors.New("failure")
+			})
+		}
+
+		// Verify circuit is now open
+		breaker := cb.GetBreaker(serviceName)
+		if breaker.State() != gobreaker.StateOpen {
+			t.Errorf("Expected circuit to be Open, got %v", breaker.State())
+		}
+	})
+}
+
+func TestCircuitBreaker_ExecuteContext(t *testing.T) {
+	cb := NewCircuitBreaker()
+
+	t.Run("Successful execution with context", func(t *testing.T) {
+		ctx := context.Background()
+		result, err := cb.ExecuteContext(ctx, "test-service", func() (interface{}, error) {
+			return "success", nil
+		})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if result != "success" {
+			t.Errorf("Expected 'success', got %v", result)
+		}
+	})
+
+	t.Run("Context cancelled before execution", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+
+		result, err := cb.ExecuteContext(ctx, "test-service-2", func() (interface{}, error) {
+			return "should not run", nil
+		})
+		
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled error, got %v", err)
+		}
+		if result != nil {
+			t.Errorf("Expected nil result, got %v", result)
+		}
+	})
+
+	t.Run("Context timeout during execution", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+		defer cancel()
+
+		time.Sleep(2 * time.Millisecond) // Ensure context is expired
+
+		result, err := cb.ExecuteContext(ctx, "test-service-3", func() (interface{}, error) {
+			return "should not run", nil
+		})
+		
+		if err != context.DeadlineExceeded {
+			t.Errorf("Expected context.DeadlineExceeded error, got %v", err)
+		}
+		if result != nil {
+			t.Errorf("Expected nil result, got %v", result)
+		}
+	})
 }

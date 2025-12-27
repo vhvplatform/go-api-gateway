@@ -66,7 +66,7 @@ func NewAuthClient(serviceURL string, log *logger.Logger) *AuthClient {
 		}
 	}
 
-	log.Info("Successfully connected to auth service", 
+	log.Info("Successfully connected to auth service",
 		zap.String("url", serviceURL),
 		zap.Int("pool_size", poolSize))
 	return &AuthClient{
