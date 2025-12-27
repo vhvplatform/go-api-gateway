@@ -71,7 +71,7 @@ func (rl *RateLimiter) GetLimiter(key string) *rate.Limiter {
 
 // CleanupLimiters removes inactive limiters
 func (rl *RateLimiter) CleanupLimiters(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 
 	for {
@@ -79,10 +79,12 @@ func (rl *RateLimiter) CleanupLimiters(ctx context.Context) {
 		case <-ticker.C:
 			rl.mu.Lock()
 			now := time.Now()
+			cleaned := 0
 			for key, entry := range rl.limiters {
 				// Only delete if inactive for 10 minutes
 				if now.Sub(entry.lastAccess) > 10*time.Minute {
 					delete(rl.limiters, key)
+					cleaned++
 				}
 			}
 			rl.mu.Unlock()

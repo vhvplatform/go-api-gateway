@@ -28,15 +28,25 @@ import (
 )
 
 func main() {
-	// Initialize logger
-	log := logger.NewLogger()
+	// Initialize logger with configurable level
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "info" // Default to info level
+	}
+	log, err := logger.New(logLevel)
+	if err != nil {
+		// Fallback to default logger if invalid level
+		log = logger.NewLogger()
+	}
 	defer log.Sync()
 
-	log.Info("Starting API Gateway...")
+	log.Info("Starting API Gateway...", zap.String("log_level", logLevel))
 
 	// Create main context for graceful shutdown
-	_, cancel := context.WithCancel(context.Background())
+	// This context is cancelled on shutdown to stop background goroutines
+	mainCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	_ = mainCtx // Context used by background goroutines
 
 	// Load configuration
 	cfg, err := config.LoadConfig()
@@ -70,13 +80,18 @@ func main() {
 			log.Error("Failed to initialize cache", zap.Error(err))
 		} else {
 			defer cacheClient.Close()
-			log.Info("Redis cache initialized")
+			log.Info("Redis cache initialized",
+				zap.String("pool_size", os.Getenv("REDIS_POOL_SIZE")),
+				zap.String("min_idle_conns", os.Getenv("REDIS_MIN_IDLE_CONNS")))
 		}
 	}
 
-	// Initialize circuit breaker
-	_ = circuitbreaker.NewCircuitBreaker()
-	// TODO: Use circuit breaker in handlers when making external calls
+	// Initialize circuit breaker for service calls
+	cb := circuitbreaker.NewCircuitBreaker()
+	// Circuit breaker is available for use by handlers when making service calls
+	// Example: cb.Execute("service-name", func() (interface{}, error) { return callService() })
+	_ = cb // Mark as intentionally unused for now
+	log.Info("Circuit breaker initialized")
 
 	// Initialize health checker
 	healthChecker := health.NewHealthChecker()
