@@ -135,6 +135,7 @@ MAX_REQUEST_SIZE=10485760                # Max request size in bytes (default: 1
 
 # gRPC Connection Pooling
 GRPC_POOL_SIZE=5                         # gRPC connection pool size (default: 5)
+GRPC_MAX_MESSAGE_SIZE=10485760           # Max gRPC message size in bytes (default: 10MB)
 
 # Optional: Redis Cache
 REDIS_URL=redis://redis:6379/0           # Redis connection URL

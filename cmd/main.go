@@ -43,10 +43,10 @@ func main() {
 	log.Info("Starting API Gateway...", zap.String("log_level", logLevel))
 
 	// Create main context for graceful shutdown
-	// This context is cancelled on shutdown to stop background goroutines
-	mainCtx, cancel := context.WithCancel(context.Background())
+	// Note: Currently unused as rate limiting uses go-shared middleware
+	// Can be utilized if switching to internal rate limiter with context support
+	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	_ = mainCtx // Context used by background goroutines
 
 	// Load configuration
 	cfg, err := config.LoadConfig()

@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"strconv"
 	"testing"
 	"time"
 
@@ -38,8 +39,8 @@ func BenchmarkRateLimiterWithCleanup(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// Simulate different keys
-		key := "key-" + string(rune(i%100))
+		// Simulate different keys using strconv
+		key := "key-" + strconv.Itoa(i%100)
 		limiter := rl.GetLimiter(key)
 		_ = limiter.Allow()
 	}

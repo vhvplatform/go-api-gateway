@@ -36,6 +36,14 @@ func NewTenantClient(serviceURL string, log *logger.Logger) *TenantClient {
 		}
 	}
 
+	// Get configurable max message size (default: 10MB)
+	maxMsgSize := 10 * 1024 * 1024
+	if ms := os.Getenv("GRPC_MAX_MESSAGE_SIZE"); ms != "" {
+		if parsed, err := strconv.Atoi(ms); err == nil && parsed > 0 {
+			maxMsgSize = parsed
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -53,7 +61,7 @@ func NewTenantClient(serviceURL string, log *logger.Logger) *TenantClient {
 		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(retryOpts...)),
 		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor(retryOpts...)),
 		grpc.WithKeepaliveParams(kaParams),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(poolSize*1024*1024)), // Pool-based message size
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)),
 		grpc.WithBlock(),
 	)
 
@@ -68,7 +76,8 @@ func NewTenantClient(serviceURL string, log *logger.Logger) *TenantClient {
 
 	log.Info("Successfully connected to tenant service",
 		zap.String("url", serviceURL),
-		zap.Int("pool_size", poolSize))
+		zap.Int("pool_size", poolSize),
+		zap.Int("max_message_size_mb", maxMsgSize/(1024*1024)))
 	return &TenantClient{
 		conn: conn,
 		log:  log,

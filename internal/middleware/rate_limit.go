@@ -80,12 +80,10 @@ func (rl *RateLimiter) CleanupLimiters(ctx context.Context) {
 		case <-ticker.C:
 			rl.mu.Lock()
 			now := time.Now()
-			cleaned := 0
 			for key, entry := range rl.limiters {
 				// Only delete if inactive for 10 minutes
 				if now.Sub(entry.lastAccess) > 10*time.Minute {
 					delete(rl.limiters, key)
-					cleaned++
 				}
 			}
 			// Update metric with current count
