@@ -247,7 +247,7 @@ func TestCircuitBreaker_Execute(t *testing.T) {
 
 	t.Run("Circuit breaker trips after failures", func(t *testing.T) {
 		serviceName := "test-service-3"
-		
+
 		// Cause failures to trip the circuit
 		for i := 0; i < 10; i++ {
 			_, _ = cb.Execute(serviceName, func() (interface{}, error) {
@@ -286,7 +286,7 @@ func TestCircuitBreaker_ExecuteContext(t *testing.T) {
 		result, err := cb.ExecuteContext(ctx, "test-service-2", func() (interface{}, error) {
 			return "should not run", nil
 		})
-		
+
 		if err != context.Canceled {
 			t.Errorf("Expected context.Canceled error, got %v", err)
 		}
@@ -304,7 +304,7 @@ func TestCircuitBreaker_ExecuteContext(t *testing.T) {
 		result, err := cb.ExecuteContext(ctx, "test-service-3", func() (interface{}, error) {
 			return "should not run", nil
 		})
-		
+
 		if err != context.DeadlineExceeded {
 			t.Errorf("Expected context.DeadlineExceeded error, got %v", err)
 		}
