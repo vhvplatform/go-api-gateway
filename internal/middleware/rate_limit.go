@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vhvplatform/go-api-gateway/internal/metrics"
 	"golang.org/x/time/rate"
 )
 
@@ -87,6 +88,8 @@ func (rl *RateLimiter) CleanupLimiters(ctx context.Context) {
 					cleaned++
 				}
 			}
+			// Update metric with current count
+			metrics.RateLimiterActiveCount.Set(float64(len(rl.limiters)))
 			rl.mu.Unlock()
 		case <-ctx.Done():
 			return
@@ -102,16 +105,20 @@ func RateLimitMiddleware(rl *RateLimiter, ctx context.Context) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Use IP address as the key
 		key := c.ClientIP()
+		keyType := "ip"
 
 		// Get tenant ID if available for per-tenant limiting
 		tenantID := c.GetHeader("X-Tenant-ID")
 		if tenantID != "" {
 			key = tenantID + ":" + key
+			keyType = "tenant"
 		}
 
 		limiter := rl.GetLimiter(key)
 
 		if !limiter.Allow() {
+			// Track rate limit rejection
+			metrics.RateLimiterRejectedTotal.WithLabelValues(keyType).Inc()
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error": "Rate limit exceeded",
 			})
