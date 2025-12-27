@@ -1,6 +1,7 @@
 package circuitbreaker
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -52,4 +53,23 @@ func (cb *CircuitBreaker) GetBreaker(name string) *gobreaker.CircuitBreaker {
 	breaker = gobreaker.NewCircuitBreaker(settings)
 	cb.breakers[name] = breaker
 	return breaker
+}
+
+// Execute wraps a function call with circuit breaker protection
+func (cb *CircuitBreaker) Execute(name string, fn func() (interface{}, error)) (interface{}, error) {
+	breaker := cb.GetBreaker(name)
+	return breaker.Execute(fn)
+}
+
+// ExecuteContext wraps a context-aware function call with circuit breaker protection
+func (cb *CircuitBreaker) ExecuteContext(ctx context.Context, name string, fn func() (interface{}, error)) (interface{}, error) {
+	// Check if context is already cancelled
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	breaker := cb.GetBreaker(name)
+	return breaker.Execute(fn)
 }

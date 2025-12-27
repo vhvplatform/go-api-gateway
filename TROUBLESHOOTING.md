@@ -149,13 +149,17 @@ go tool pprof http://localhost:8080/debug/pprof/profile
 **Solutions**:
 
 1. **Too Many Requests**
-   - Increase `RATE_LIMIT_RPS` is too high
+   - Increase `RATE_LIMIT_RPS` if too low
    - Add more gateway replicas
    - Enable horizontal pod autoscaling
 
 2. **Inefficient Logging**
-   - Reduce log level in production
-   - Disable debug logging
+   - Set `LOG_LEVEL=warn` or `LOG_LEVEL=error` in production
+   - Default is `LOG_LEVEL=info`
+   - Use `LOG_LEVEL=debug` only for troubleshooting
+   ```bash
+   export LOG_LEVEL=warn
+   ```
 
 3. **Memory Leaks**
    - Update to latest version
@@ -609,29 +613,57 @@ If you can't resolve the issue:
 
 ## Performance Tuning Tips
 
-1. **Enable Redis Caching**
+1. **Optimize Logging for Production**
+   - Set `LOG_LEVEL=warn` or `LOG_LEVEL=error` to reduce CPU usage
+   - Avoid debug logging in production
+   ```bash
+   export LOG_LEVEL=warn
+   ```
+
+2. **Enable Redis Caching**
    - Significantly reduces backend load
    - Configure appropriate TTL
+   - Tune connection pool size
+   ```bash
+   export REDIS_POOL_SIZE=20
+   export REDIS_MIN_IDLE_CONNS=10
+   ```
 
-2. **Tune Rate Limits**
+3. **Tune Rate Limits**
    - Set per-tenant limits if possible
    - Monitor actual usage patterns
+   - Rate limiter cleans up inactive limiters every 10 minutes
+   ```bash
+   export RATE_LIMIT_RPS=500
+   export RATE_LIMIT_BURST=1000
+   ```
 
-3. **Optimize Circuit Breaker**
+4. **Optimize Circuit Breaker**
    - Tune thresholds for your services
-   - Monitor failure rates
+   - Monitor failure rates via metrics
+   - Circuit breaker trips at 60% failure rate (minimum 3 requests)
 
-4. **Connection Pooling**
-   - gRPC connections are pooled by default
-   - Tune pool size if needed
+5. **Connection Pooling**
+   - gRPC connections use keepalive and automatic reconnection
+   - Tune pool size based on load
+   ```bash
+   export GRPC_POOL_SIZE=10
+   ```
 
-5. **Horizontal Scaling**
+6. **Horizontal Scaling**
    - Run multiple gateway instances
    - Use load balancer for distribution
+   - Each instance maintains its own connection pools
 
-6. **Resource Limits**
+7. **Resource Limits**
    - Set appropriate CPU/memory limits
-   - Enable autoscaling
+   - Enable autoscaling based on CPU/memory metrics
+   - Monitor goroutine count via pprof
+
+8. **Database Connection Management**
+   - Backend services should use connection pooling
+   - Monitor connection pool exhaustion
+   - Adjust pool sizes based on gateway load
 
 ---
 

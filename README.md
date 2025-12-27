@@ -114,6 +114,9 @@ Comprehensive PlantUML diagrams documenting the system:
 # Server Configuration
 API_GATEWAY_PORT=8080                    # HTTP server port
 
+# Logging
+LOG_LEVEL=info                           # Log level: debug, info, warn, error (default: info)
+
 # Service URLs
 AUTH_SERVICE_URL=auth-service:50051      # Auth service gRPC endpoint
 USER_SERVICE_URL=user-service:50052      # User service gRPC endpoint
@@ -130,8 +133,14 @@ RATE_LIMIT_BURST=200                     # Burst capacity (default: 200)
 # Request Limits
 MAX_REQUEST_SIZE=10485760                # Max request size in bytes (default: 10MB)
 
+# gRPC Connection Pooling
+GRPC_POOL_SIZE=5                         # gRPC connection pool size (default: 5)
+GRPC_MAX_MESSAGE_SIZE=10485760           # Max gRPC message size in bytes (default: 10MB)
+
 # Optional: Redis Cache
 REDIS_URL=redis://redis:6379/0           # Redis connection URL
+REDIS_POOL_SIZE=10                       # Redis connection pool size (default: 10)
+REDIS_MIN_IDLE_CONNS=5                   # Minimum idle connections (default: 5)
 
 # Optional: Distributed Tracing
 ENABLE_TRACING=true                      # Enable OpenTelemetry tracing
@@ -345,20 +354,48 @@ Structured JSON logs include:
 
 ## Performance Tuning
 
+### Logging
+- Set `LOG_LEVEL=warn` or `LOG_LEVEL=error` in production to reduce CPU overhead
+- Use `LOG_LEVEL=debug` only for troubleshooting
+- Default level is `info`, which provides good balance
+
 ### Rate Limiting
 - Adjust `RATE_LIMIT_RPS` for higher/lower throughput
 - Increase `RATE_LIMIT_BURST` for spiky traffic patterns
 - Monitor memory usage with many unique IPs
+- Rate limiter automatically cleans up inactive limiters every 10 minutes
+
+### gRPC Connection Pooling
+- Set `GRPC_POOL_SIZE` to control concurrent connections (default: 5)
+- Larger pool sizes handle higher loads but use more memory
+- gRPC connections use keepalive (10s interval) for health monitoring
+- Automatic reconnection with exponential backoff on failures
+
+### Redis Cache Configuration
+- Configure `REDIS_POOL_SIZE` for connection pool (default: 10)
+- Set `REDIS_MIN_IDLE_CONNS` to maintain warm connections (default: 5)
+- Connection max idle time: 5 minutes
+- Connection max lifetime: 30 minutes
+- Pool timeout: 4 seconds
+
+### Circuit Breaker
+- Automatically trips at 60% failure rate (minimum 3 requests)
+- Half-open state allows 3 test requests
+- 30-second timeout before trying half-open
+- Monitor circuit breaker state via metrics
 
 ### Timeouts
 - Default 30s request timeout (configurable in code)
 - 10s gRPC connection timeout
 - 30s graceful shutdown timeout
+- 3s keepalive timeout for gRPC connections
 
 ### Connection Pooling
 - gRPC connections are persistent with retry logic
 - Automatic reconnection on failure
 - 3 retry attempts with exponential backoff
+- Keepalive ensures connections stay healthy under load
+- Configure pool sizes based on expected load and service capacity
 
 ## Testing
 

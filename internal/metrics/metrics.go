@@ -41,4 +41,55 @@ var (
 		},
 		[]string{"service"},
 	)
+
+	// RateLimiterActiveCount tracks active rate limiters
+	RateLimiterActiveCount = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "api_gateway_rate_limiter_active_limiters",
+			Help: "Number of active rate limiters in memory",
+		},
+	)
+
+	// RateLimiterRejectedTotal counts rejected requests
+	RateLimiterRejectedTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "api_gateway_rate_limiter_rejected_total",
+			Help: "Total number of rate limited requests",
+		},
+		[]string{"key_type"}, // "ip" or "tenant"
+	)
+
+	// CacheHitsTotal counts cache hits
+	CacheHitsTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "api_gateway_cache_hits_total",
+			Help: "Total number of cache hits",
+		},
+	)
+
+	// CacheMissesTotal counts cache misses
+	CacheMissesTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "api_gateway_cache_misses_total",
+			Help: "Total number of cache misses",
+		},
+	)
+
+	// GRPCConnectionsActive tracks active gRPC connections
+	GRPCConnectionsActive = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "api_gateway_grpc_connections_active",
+			Help: "Number of active gRPC connections per service",
+		},
+		[]string{"service"},
+	)
+
+	// GRPCConnectionErrors counts connection errors
+	GRPCConnectionErrors = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "api_gateway_grpc_connection_errors_total",
+			Help: "Total number of gRPC connection errors",
+		},
+		[]string{"service"},
+	)
 )
