@@ -20,7 +20,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
   "id": "user-123",
   "email": "john.doe@example.com",
   "name": "John Doe",
-  "created_at": "2024-01-15T10:30:00Z"
+  "createdAt": "2024-01-15T10:30:00Z"
 }
 ```
 
@@ -40,15 +40,15 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlci0xMjMiLCJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwiZXhwIjoxNzA1MzI2NjAwfQ.xyz",
   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlci0xMjMiLCJ0b2tlbl9pZCI6InRva2VuLWFiYyIsImV4cCI6MTcwNTkzMTQwMH0.abc",
-  "expires_in": 900,
-  "token_type": "Bearer"
+  "expiresIn": 900,
+  "tokenType": "Bearer"
 }
 ```
 
 **Token Details:**
 - `access_token`: Valid for 15 minutes, used for API authentication
 - `refresh_token`: Valid for 7 days, used to obtain new access tokens
-- `expires_in`: Access token expiration time in seconds
+- `expiresIn`: Access token expiration time in seconds
 
 ## 3. Making Authenticated Requests
 
@@ -68,10 +68,10 @@ curl http://localhost:8080/api/v1/users/user-123 \
   "id": "user-123",
   "email": "john.doe@example.com",
   "name": "John Doe",
-  "tenant_id": "tenant-456",
+  "tenantId": "tenant-456",
   "roles": ["user"],
-  "created_at": "2024-01-15T10:30:00Z",
-  "updated_at": "2024-01-15T10:30:00Z"
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
 }
 ```
 
@@ -83,7 +83,7 @@ When the access token expires (after 15 minutes), API requests will return 401 U
 {
   "error": "unauthorized",
   "message": "Invalid or expired token",
-  "correlation_id": "abc-123-def",
+  "correlationId": "abc-123-def",
   "timestamp": "2024-01-15T10:45:00Z"
 }
 ```
@@ -106,8 +106,8 @@ curl -X POST http://localhost:8080/api/v1/auth/refresh \
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new_token.xyz",
-  "expires_in": 900,
-  "token_type": "Bearer"
+  "expiresIn": 900,
+  "tokenType": "Bearer"
 }
 ```
 
@@ -155,7 +155,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 {
   "error": "unauthorized",
   "message": "Invalid credentials",
-  "correlation_id": "abc-123-def",
+  "correlationId": "abc-123-def",
   "timestamp": "2024-01-15T10:30:00Z"
 }
 ```
@@ -171,7 +171,7 @@ curl http://localhost:8080/api/v1/users
 {
   "error": "unauthorized",
   "message": "Missing authorization header",
-  "correlation_id": "abc-123-def",
+  "correlationId": "abc-123-def",
   "timestamp": "2024-01-15T10:30:00Z"
 }
 ```
@@ -189,7 +189,7 @@ curl -X POST http://localhost:8080/api/v1/auth/refresh \
 {
   "error": "unauthorized",
   "message": "Invalid refresh token",
-  "correlation_id": "abc-123-def",
+  "correlationId": "abc-123-def",
   "timestamp": "2024-01-15T10:30:00Z"
 }
 ```
@@ -234,7 +234,7 @@ async function login(email, password) {
   const data = await response.json();
   accessToken = data.access_token;
   refreshToken = data.refresh_token;
-  tokenExpiration = Date.now() + (data.expires_in * 1000);
+  tokenExpiration = Date.now() + (data.expiresIn * 1000);
 }
 
 // Refresh token if needed
@@ -249,7 +249,7 @@ async function ensureValidToken() {
     
     const data = await response.json();
     accessToken = data.access_token;
-    tokenExpiration = Date.now() + (data.expires_in * 1000);
+    tokenExpiration = Date.now() + (data.expiresIn * 1000);
   }
 }
 
