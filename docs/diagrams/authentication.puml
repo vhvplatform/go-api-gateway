@@ -28,10 +28,10 @@ activate db
 db --> authsvc : User created
 deactivate db
 
-authsvc --> gateway : Success response\n{user_id, email}
+authsvc --> gateway : Success response\n{userId, email}
 deactivate authsvc
 
-gateway --> client : 201 Created\n{user_id, email}
+gateway --> client : 201 Created\n{userId, email}
 deactivate gateway
 
 == User Login ==
@@ -59,17 +59,17 @@ else Password Valid
     authsvc -> authsvc : Generate JWT tokens
     note right
       Access Token (15 min):
-      - user_id
+      - userId
       - email
-      - tenant_id (if applicable)
+      - tenantId (if applicable)
       - roles
       
       Refresh Token (7 days):
-      - user_id
-      - token_id (for revocation)
+      - userId
+      - tokenId (for revocation)
     end note
     
-    authsvc -> redis : Store refresh token\nSET refresh_token:{token_id}\nEXP 7 days
+    authsvc -> redis : Store refresh token\nSET refresh_token:{tokenId}\nEXP 7 days
     activate redis
     redis --> authsvc : OK
     deactivate redis
@@ -77,7 +77,7 @@ else Password Valid
     authsvc --> gateway : Success response
     deactivate authsvc
     
-    gateway --> client : 200 OK\n{access_token, refresh_token, expires_in}
+    gateway --> client : 200 OK\n{access_token, refresh_token, expiresIn}
     deactivate gateway
 end
 
@@ -109,17 +109,17 @@ else Token Present
         deactivate gateway
     else Token Valid
         
-        jwt --> authmw : Token claims\n{user_id, email, tenant_id, roles}
+        jwt --> authmw : Token claims\n{userId, email, tenantId, roles}
         deactivate jwt
         
         authmw -> authmw : Extract user info\nAdd to request context
         note right
           Context contains:
-          - user_id
+          - userId
           - email  
-          - tenant_id
+          - tenantId
           - roles
-          - correlation_id
+          - correlationId
         end note
         
         authmw -> gateway : Continue with context
@@ -136,7 +136,7 @@ else Token Present
             deactivate gateway
         else Authorized
             
-            usersvc -> db : Query users\n(filtered by tenant_id if multi-tenant)
+            usersvc -> db : Query users\n(filtered by tenantId if multi-tenant)
             activate db
             db --> usersvc : User list
             deactivate db
@@ -166,7 +166,7 @@ alt Token Invalid
     deactivate gateway
 else Token Valid
     
-    authsvc -> redis : Check token revocation\nGET refresh_token:{token_id}
+    authsvc -> redis : Check token revocation\nGET refresh_token:{tokenId}
     activate redis
     
     alt Token Revoked or Not Found
@@ -185,7 +185,7 @@ else Token Valid
         authsvc --> gateway : Success response
         deactivate authsvc
         
-        gateway --> client : 200 OK\n{access_token, expires_in}
+        gateway --> client : 200 OK\n{access_token, expiresIn}
         deactivate gateway
     end
 end
@@ -207,12 +207,12 @@ deactivate authmw
 gateway -> authsvc : Forward logout request (gRPC)
 activate authsvc
 
-authsvc -> redis : Revoke refresh token\nDEL refresh_token:{token_id}
+authsvc -> redis : Revoke refresh token\nDEL refresh_token:{tokenId}
 activate redis
 redis --> authsvc : OK
 deactivate redis
 
-authsvc -> redis : Blacklist access token\nSET blacklist:{token_jti}\nEXP remaining_ttl
+authsvc -> redis : Blacklist access token\nSET blacklist:{tokenJti}\nEXP remainingTtl
 activate redis
 note right
   Access tokens cannot be truly revoked,
@@ -230,12 +230,12 @@ deactivate gateway
 == Multi-Tenant Context ==
 
 note over client, db
-  For multi-tenant systems, the JWT includes tenant_id.
-  All backend services filter data by tenant_id automatically.
+  For multi-tenant systems, the JWT includes tenantId.
+  All backend services filter data by tenantId automatically.
   
   This ensures tenant isolation at the application level:
   - Users can only access their tenant's data
-  - Queries are automatically scoped to tenant_id
+  - Queries are automatically scoped to tenantId
   - Cross-tenant access is prevented by the gateway
 end note
 

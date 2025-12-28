@@ -220,7 +220,7 @@ note over gateway, bucket
   Optional: Per-Tenant Rate Limiting
   
   Instead of (or in addition to) per-IP:
-  - Extract tenant_id from JWT
+  - Extract tenantId from JWT
   - Apply rate limits per tenant
   - Different limits for different tiers:
     * Free tier: 100 RPS
@@ -228,7 +228,7 @@ note over gateway, bucket
     * Enterprise tier: 10000 RPS
   
   Implementation:
-  - Use tenant_id as limiter key
+  - Use tenantId as limiter key
   - Configure per-tenant limits
   - Combine with per-IP for double protection
 end note
