@@ -8,10 +8,7 @@ param(
     [ValidateSet('help', 'build', 'build-linux', 'test', 'test-coverage', 'test-coverage-check', 
                  'clean', 'deps', 'deps-update', 'deps-verify', 'run', 'fmt', 'vet', 'lint', 
                  'validate', 'version', 'docker-build', 'docker-run')]
-    [string]$Command = 'help',
-    
-    [Parameter()]
-    [switch]$Verbose
+    [string]$Command = 'help'
 )
 
 # Variables
@@ -81,9 +78,6 @@ Available commands:
 
 Usage: .\build.ps1 [command]
 Example: .\build.ps1 build
-
-For more verbose output, add -Verbose flag:
-Example: .\build.ps1 build -Verbose
 "@
 }
 
@@ -103,7 +97,8 @@ function Build-App {
     
     $ldflags = "-X main.Version=$version -X main.BuildTime=$buildTime"
     
-    & $GoCmd build -ldflags $ldflags -o "$GoBin\$AppName.exe" .\cmd\main.go
+    # Use forward slashes for cross-platform compatibility
+    & $GoCmd build -ldflags $ldflags -o "$GoBin/$AppName.exe" ./cmd/main.go
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "Build complete: $GoBin\$AppName.exe"
@@ -131,7 +126,8 @@ function Build-Linux {
     $env:GOOS = "linux"
     $env:GOARCH = "amd64"
     
-    & $GoCmd build -ldflags $ldflags -o "$GoBin\$AppName-linux" .\cmd\main.go
+    # Use forward slashes for cross-platform compatibility
+    & $GoCmd build -ldflags $ldflags -o "$GoBin/$AppName-linux" ./cmd/main.go
     
     # Restore environment
     Remove-Item Env:\CGO_ENABLED -ErrorAction SilentlyContinue
@@ -151,7 +147,9 @@ function Build-Linux {
 function Run-Tests {
     Write-Info "Running tests..."
     
-    & $GoCmd test -v -race -coverprofile=coverage.txt -covermode=atomic .\...
+    # Use array to avoid PowerShell glob expansion
+    $testArgs = @('test', '-v', '-race', '-coverprofile=coverage.txt', '-covermode=atomic', './...')
+    & $GoCmd $testArgs
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "Tests complete"
@@ -245,7 +243,8 @@ function Update-Deps {
     Write-Info "Updating dependencies..."
     
     & $GoCmd mod tidy
-    & $GoCmd get -u .\...
+    $getArgs = @('get', '-u', './...')
+    & $GoCmd $getArgs
     & $GoCmd mod tidy
     
     if ($LASTEXITCODE -eq 0) {
@@ -275,19 +274,21 @@ function Verify-Deps {
 
 function Run-App {
     Write-Info "Running $AppName..."
-    & $GoCmd run .\cmd\main.go
+    & $GoCmd run ./cmd/main.go
 }
 
 function Format-Code {
     Write-Info "Formatting code..."
-    & $GoCmd fmt .\...
+    $fmtArgs = @('fmt', './...')
+    & $GoCmd $fmtArgs
     Write-Success "Format complete"
 }
 
 function Run-Vet {
     Write-Info "Running go vet..."
     
-    & $GoCmd vet .\...
+    $vetArgs = @('vet', './...')
+    & $GoCmd $vetArgs
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "Vet complete"
@@ -315,7 +316,8 @@ function Run-Lint {
         }
     }
     
-    & golangci-lint run --timeout=5m .\...
+    $lintArgs = @('run', '--timeout=5m', './...')
+    & golangci-lint $lintArgs
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "Lint complete"
