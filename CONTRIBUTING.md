@@ -42,8 +42,10 @@ Before contributing, ensure you have:
 - **Git** installed and configured
 - **Go** 1.25.5 or later
 - **Docker** for containerization
-- **Make** for build automation
+- **Make** for build automation (Linux/macOS) or use Windows build scripts
 - Access to a Kubernetes cluster for integration testing (optional)
+
+**Windows Users**: See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for complete Windows setup instructions including PowerShell and CMD scripts.
 
 ### Fork and Clone
 
@@ -88,12 +90,31 @@ Branch naming conventions:
 
 ### 2. Set Up Development Environment
 
+**Linux/macOS:**
 ```bash
 # Install dependencies
 make deps
 
 # Verify setup
 make validate
+```
+
+**Windows (PowerShell):**
+```powershell
+# Install dependencies
+.\build.ps1 deps
+
+# Verify setup
+.\build.ps1 validate
+```
+
+**Windows (CMD):**
+```cmd
+# Install dependencies
+build.bat deps
+
+# Verify setup
+build.bat validate
 ```
 
 ### 3. Make Changes
@@ -105,6 +126,7 @@ make validate
 
 ### 4. Test Your Changes
 
+**Linux/macOS:**
 ```bash
 # Run all tests
 make test
@@ -120,6 +142,33 @@ make lint
 
 # Run all validation
 make validate
+```
+
+**Windows (PowerShell):**
+```powershell
+# Run all tests
+.\build.ps1 test
+
+# Run tests with coverage
+.\build.ps1 test-coverage
+
+# Check coverage threshold (80%)
+.\build.ps1 test-coverage-check
+
+# Run linter
+.\build.ps1 lint
+
+# Run all validation
+.\build.ps1 validate
+```
+
+**Windows (CMD):**
+```cmd
+# Run all tests
+build.bat test
+
+# Run validation
+build.bat validate
 ```
 
 ### 5. Commit Your Changes
