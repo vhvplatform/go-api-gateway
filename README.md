@@ -27,6 +27,7 @@ This service follows the architectural standards defined in [go-infrastructure](
 
 ### Quick Links
 - **[Contributing Guide](CONTRIBUTING.md)** - Development and contribution guidelines
+- **[Windows Setup Guide](WINDOWS_SETUP.md)** - Complete Windows development setup
 - **[Troubleshooting Guide](TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Architecture Diagrams](docs/diagrams/)** - Visual system architecture (PlantUML)
 - **[Examples](examples/)** - Usage examples and Docker Compose setup
@@ -191,10 +192,12 @@ This project follows the [go-infrastructure](https://github.com/vhvplatform/go-i
 
 - Go 1.25.5 or later
 - Docker (for containerization)
-- Make (for build automation)
+- Make (for build automation on Linux/macOS)
 - kubectl (for Kubernetes deployment)
 
-### Quick Start with Makefile
+**Windows Users**: See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for detailed Windows development setup including PowerShell and batch scripts.
+
+### Quick Start with Makefile (Linux/macOS)
 
 ```bash
 # Show all available targets
@@ -216,8 +219,40 @@ make validate
 make docker-build
 ```
 
+### Quick Start on Windows
+
+```powershell
+# PowerShell - Show all available commands
+.\build.ps1 help
+
+# Download dependencies
+.\build.ps1 deps
+
+# Build the application
+.\build.ps1 build
+
+# Run tests
+.\build.ps1 test
+
+# Run all validation (fmt, vet, test)
+.\build.ps1 validate
+```
+
+Or using Command Prompt:
+
+```cmd
+# CMD - Show all available commands
+build.bat help
+
+# Build the application
+build.bat build
+```
+
+For complete Windows setup instructions, see [WINDOWS_SETUP.md](WINDOWS_SETUP.md).
+
 ### Build
 
+**Linux/macOS:**
 ```bash
 # Using Makefile (recommended)
 make build
@@ -226,14 +261,39 @@ make build
 go build -o bin/api-gateway ./cmd/main.go
 ```
 
+**Windows:**
+```powershell
+# Using PowerShell script (recommended)
+.\build.ps1 build
+
+# Or using CMD batch script
+build.bat build
+
+# Or using go directly
+go build -o bin\api-gateway.exe .\cmd\main.go
+```
+
 ### Run
 
+**Linux/macOS:**
 ```bash
 # Using Makefile
 make run
 
 # Or run the binary directly
 ./bin/api-gateway
+```
+
+**Windows:**
+```powershell
+# Using PowerShell script
+.\build.ps1 run
+
+# Or using CMD batch script
+build.bat run
+
+# Or run the binary directly
+.\bin\api-gateway.exe
 ```
 
 ### Docker
