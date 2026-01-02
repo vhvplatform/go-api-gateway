@@ -14,6 +14,8 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/vhvplatform/go-api-gateway/internal/cache"
 	"github.com/vhvplatform/go-api-gateway/internal/circuitbreaker"
 	"github.com/vhvplatform/go-api-gateway/internal/client"
@@ -25,7 +27,29 @@ import (
 	"github.com/vhvplatform/go-shared/logger"
 	pkgmiddleware "github.com/vhvplatform/go-shared/middleware"
 	"go.uber.org/zap"
+
+	_ "github.com/vhvplatform/go-api-gateway/docs"
 )
+
+// @title API Gateway
+// @version 1.0
+// @description Unified API Gateway for VHV Platform Microservices
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.vhvplatform.com/support
+// @contact.email support@vhvplatform.com
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 
 func main() {
 	// Initialize logger
@@ -171,6 +195,13 @@ func main() {
 	r.Use(pkgmiddleware.PerIP(rateLimit, rateBurst))
 
 	// Health check endpoints
+	// Health Check godoc
+	// @Summary Health check
+	// @Description Check if API Gateway is healthy
+	// @Tags health
+	// @Produce json
+	// @Success 200 {object} map[string]interface{} "Gateway healthy"
+	// @Router /health [get]
 	r.GET("/health", func(c *gin.Context) {
 		status := healthChecker.CheckAll(c.Request.Context())
 		if status.Status == "healthy" {
@@ -179,14 +210,32 @@ func main() {
 			c.JSON(http.StatusServiceUnavailable, status)
 		}
 	})
+
+	// Ready Check godoc
+	// @Summary Readiness check
+	// @Description Check if API Gateway is ready
+	// @Tags health
+	// @Produce json
+	// @Success 200 {object} map[string]interface{} "Gateway ready"
+	// @Router /ready [get]
 	r.GET("/ready", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 
 	// Metrics endpoint (Prometheus)
+	// Metrics godoc
+	// @Summary Prometheus metrics
+	// @Description Get Prometheus metrics
+	// @Tags metrics
+	// @Produce text/plain
+	// @Success 200 {string} string "Metrics data"
+	// @Router /metrics [get]
 	if os.Getenv("ENABLE_METRICS") != "false" {
 		r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	}
+
+	// Swagger endpoint
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Setup routes
 	router.SetupRoutes(r, cfg, authHandler, userHandler, tenantHandler, notificationHandler, log)

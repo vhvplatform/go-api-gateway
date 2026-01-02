@@ -197,3 +197,15 @@ version: ## Display version information
 	@echo "Version: $(VERSION)"
 	@echo "Build Time: $(BUILD_TIME)"
 	@echo "Go Version: $(GO_VERSION)"
+
+.PHONY: swagger
+swagger: ## Generate swagger documentation
+	@echo "Generating swagger documentation..."
+	@$(shell go env GOPATH)/bin/swag init -g cmd/main.go -o docs --parseDependency --parseInternal
+	@echo "Swagger documentation generated in docs/"
+
+.PHONY: install-swag
+install-swag: ## Install swag tool
+	@echo "Installing swag..."
+	@go install github.com/swaggo/swag/cmd/swag@latest
+	@echo "swag installed successfully"
