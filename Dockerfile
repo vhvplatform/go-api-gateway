@@ -1,33 +1,36 @@
+# Stage 1: Build
 FROM golang:1.25.5-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Cài đặt git nếu cần tải các module từ private repo
+RUN apk add --no-cache git
 
-# Download dependencies
+# 1. Copy file go.mod/sum của cả hai để cache layer (Tăng tốc build)
+# Lưu ý đường dẫn từ Context là thư mục gốc ~/workspace/go
+COPY go-shared/go.mod go-shared/go.sum ./go-shared/
+COPY go-api-gateway/go.mod go-api-gateway/go.sum ./go-api-gateway/
+
+# 2. Download dependencies
+# Đứng từ folder gateway để download vì nó chứa các logic dependency
+WORKDIR /app/go-api-gateway
 RUN go mod download
 
-# Copy source code
-COPY . .
+# 3. Copy mã nguồn của cả hai
+WORKDIR /app
+COPY go-shared/ ./go-shared/
+COPY go-api-gateway/ ./go-api-gateway/
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main cmd/main.go
+# 4. Build ứng dụng
+WORKDIR /app/go-api-gateway
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o /app/bin/main ./cmd/main.go
 
-# Runtime stage
+# Stage 2: Runtime
 FROM alpine:latest
-
-# Install ca-certificates for HTTPS connections
-# Alpine does not include CA certificates by default
-RUN apk --no-cache add ca-certificates || true
-
-WORKDIR /root/
-
-# Copy the binary from builder
-COPY --from=builder /app/main .
-
-# Expose port
+RUN apk --no-cache add ca-certificates tzdata || true
+WORKDIR /app
+RUN chown 1000:1000 /app
+COPY --from=builder /app/bin/main .
+USER 1000
 EXPOSE 8080
-
-# Run the application
 CMD ["./main"]
