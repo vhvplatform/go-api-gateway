@@ -201,7 +201,15 @@ version: ## Display version information
 .PHONY: swagger
 swagger: ## Generate swagger documentation
 	@echo "Generating swagger documentation..."
-	@$(shell go env GOPATH)/bin/swag init -g cmd/main.go -o docs --parseDependency --parseInternal
+	@if command -v swag >/dev/null 2>&1; then \
+		swag init -g cmd/main.go -o docs --parseDependency --parseInternal; \
+	elif [ -f $(shell go env GOPATH)/bin/swag ]; then \
+		$(shell go env GOPATH)/bin/swag init -g cmd/main.go -o docs --parseDependency --parseInternal; \
+	else \
+		echo "swag not found. Installing..."; \
+		go install github.com/swaggo/swag/cmd/swag@latest; \
+		$(shell go env GOPATH)/bin/swag init -g cmd/main.go -o docs --parseDependency --parseInternal; \
+	fi
 	@echo "Swagger documentation generated in docs/"
 
 .PHONY: install-swag
