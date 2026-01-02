@@ -1,6 +1,35 @@
 package router
 
-// This file contains Swagger annotations for all proxied routes
+// This file contains Swagger annotations for all proxied routes and system endpoints
+
+// Health and System Endpoints
+
+// Health Check godoc
+// @Summary Health check
+// @Description Check if API Gateway is healthy
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Gateway healthy"
+// @Router /health [get]
+func swaggerHealth() {}
+
+// Ready Check godoc
+// @Summary Readiness check
+// @Description Check if API Gateway is ready
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Gateway ready"
+// @Router /ready [get]
+func swaggerReady() {}
+
+// Metrics godoc
+// @Summary Prometheus metrics
+// @Description Get Prometheus metrics
+// @Tags metrics
+// @Produce text/plain
+// @Success 200 {string} string "Metrics data"
+// @Router /metrics [get]
+func swaggerMetrics() {}
 
 // Auth Routes
 

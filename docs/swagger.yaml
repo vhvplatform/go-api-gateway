@@ -747,6 +747,47 @@ paths:
       summary: Search users (Proxied to User Service)
       tags:
       - users
+  /health:
+    get:
+      description: Check if API Gateway is healthy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Gateway healthy
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /metrics:
+    get:
+      description: Get Prometheus metrics
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Metrics data
+          schema:
+            type: string
+      summary: Prometheus metrics
+      tags:
+      - metrics
+  /ready:
+    get:
+      description: Check if API Gateway is ready
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Gateway ready
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Readiness check
+      tags:
+      - health
 schemes:
 - http
 - https

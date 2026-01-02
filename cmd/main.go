@@ -195,13 +195,6 @@ func main() {
 	r.Use(pkgmiddleware.PerIP(rateLimit, rateBurst))
 
 	// Health check endpoints
-	// Health Check godoc
-	// @Summary Health check
-	// @Description Check if API Gateway is healthy
-	// @Tags health
-	// @Produce json
-	// @Success 200 {object} map[string]interface{} "Gateway healthy"
-	// @Router /health [get]
 	r.GET("/health", func(c *gin.Context) {
 		status := healthChecker.CheckAll(c.Request.Context())
 		if status.Status == "healthy" {
@@ -211,25 +204,11 @@ func main() {
 		}
 	})
 
-	// Ready Check godoc
-	// @Summary Readiness check
-	// @Description Check if API Gateway is ready
-	// @Tags health
-	// @Produce json
-	// @Success 200 {object} map[string]interface{} "Gateway ready"
-	// @Router /ready [get]
 	r.GET("/ready", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 
 	// Metrics endpoint (Prometheus)
-	// Metrics godoc
-	// @Summary Prometheus metrics
-	// @Description Get Prometheus metrics
-	// @Tags metrics
-	// @Produce text/plain
-	// @Success 200 {string} string "Metrics data"
-	// @Router /metrics [get]
 	if os.Getenv("ENABLE_METRICS") != "false" {
 		r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	}
