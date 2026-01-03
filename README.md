@@ -32,6 +32,7 @@ This service follows the architectural standards defined in [go-infrastructure](
 - **[Architecture Diagrams](docs/diagrams/)** - Visual system architecture (PlantUML)
 - **[Examples](examples/)** - Usage examples and Docker Compose setup
 - **[API Documentation](docs/api/)** - OpenAPI/Swagger specs
+- **[Swagger UI](http://localhost:8080/swagger/index.html)** - Interactive API documentation (when running locally)
 - **[go-infrastructure](https://github.com/vhvplatform/go-infrastructure)** - Infrastructure standards and deployment
 
 ### Diagrams
@@ -151,6 +152,26 @@ CIRCUIT_BREAKER_ENABLED=true             # Enable circuit breaker (default: true
 - `GET /health` - Service health status with dependency checks
 - `GET /ready` - Readiness probe
 - `GET /metrics` - Prometheus metrics endpoint
+
+### Swagger Documentation
+- `GET /swagger/index.html` - Interactive Swagger UI for API documentation
+
+The Swagger UI provides:
+- Complete API documentation for all endpoints
+- Interactive API testing interface
+- Request/response examples
+- Authentication testing with JWT tokens
+- Documentation for all proxied microservices (Auth, User, Tenant, Notification)
+
+To access Swagger UI when running locally:
+```
+http://localhost:8080/swagger/index.html
+```
+
+To regenerate Swagger documentation after API changes:
+```bash
+make swagger
+```
 
 ### API Routes
 All application routes are prefixed with `/api/v1`:
