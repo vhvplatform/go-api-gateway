@@ -2,7 +2,7 @@ version: 2
 updates:
   # Go dependencies
   - package-ecosystem: "gomod"
-    directory: "/"
+    directory: "/server"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -29,7 +29,7 @@ updates:
 
   # Docker
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/server"
     schedule:
       interval: "weekly"
     reviewers:
