@@ -2,71 +2,52 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/vhvplatform/go-api-gateway/internal/client"
 	"github.com/vhvplatform/go-api-gateway/internal/handler"
+	internalmiddleware "github.com/vhvplatform/go-api-gateway/internal/middleware"
+	"github.com/vhvplatform/go-shared/cache"
 	"github.com/vhvplatform/go-shared/config"
 	"github.com/vhvplatform/go-shared/logger"
-	pkgmiddleware "github.com/vhvplatform/go-shared/middleware"
 )
 
 // SetupRoutes configures all API routes
 func SetupRoutes(
 	r *gin.Engine,
 	cfg *config.Config,
+	authClient *client.AuthClient,
+	cacheClient cache.Cache,
+	proxyHandler *handler.ProxyHandler,
 	authHandler *handler.AuthHandler,
 	userHandler *handler.UserHandler,
 	tenantHandler *handler.TenantHandler,
 	notificationHandler *handler.NotificationHandler,
 	log *logger.Logger,
 ) {
-	// API v1 routes
-	v1 := r.Group("/api/v1")
+	// 1. PUBLIC API ROUTES
+	public := r.Group("/auth")
 	{
-		// Auth routes (public)
-		auth := v1.Group("/auth")
-		{
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/refresh", authHandler.RefreshToken)
-			auth.POST("/logout", pkgmiddleware.Auth(cfg.JWT.Secret), authHandler.Logout)
-		}
-
-		// Protected routes (require authentication)
-		protected := v1.Group("")
-		protected.Use(pkgmiddleware.Auth(cfg.JWT.Secret))
-		{
-			// User routes
-			users := protected.Group("/users")
-			{
-				users.POST("", userHandler.CreateUser)
-				users.GET("", userHandler.GetUsers)
-				users.GET("/search", userHandler.SearchUsers)
-				users.GET("/:id", userHandler.GetUser)
-				users.PUT("/:id", userHandler.UpdateUser)
-				users.DELETE("/:id", userHandler.DeleteUser)
-			}
-
-			// Tenant routes
-			tenants := protected.Group("/tenants")
-			{
-				tenants.POST("", tenantHandler.CreateTenant)
-				tenants.GET("", tenantHandler.GetTenants)
-				tenants.GET("/:id", tenantHandler.GetTenant)
-				tenants.PUT("/:id", tenantHandler.UpdateTenant)
-				tenants.DELETE("/:id", tenantHandler.DeleteTenant)
-				tenants.POST("/:id/users", tenantHandler.AddUserToTenant)
-				tenants.DELETE("/:id/users/:user_id", tenantHandler.RemoveUserFromTenant)
-			}
-
-			// Notification routes
-			notifications := protected.Group("/notifications")
-			{
-				notifications.POST("/email", notificationHandler.SendEmail)
-				notifications.POST("/webhook", notificationHandler.SendWebhook)
-				notifications.GET("", notificationHandler.GetNotifications)
-				notifications.GET("/:id", notificationHandler.GetNotification)
-			}
-		}
+		public.POST("/login", authHandler.Login)
+		public.POST("/register", authHandler.Register)
+		public.POST("/refresh", authHandler.RefreshToken)
 	}
 
-	log.Info("Routes configured successfully")
+	// 2. PROTECTED DYNAMIC API ROUTES (/api/:service/*path)
+	api := r.Group("/api")
+	api.Use(internalmiddleware.AuthMiddleware(authClient, cacheClient, cfg.JWT.Secret))
+	{
+		// This handles /api/user/profile, /api/tenant/settings, etc.
+		// The "service" param is used by proxyHandler.APIProxy
+		api.Any("/:service/*path", proxyHandler.APIProxy)
+	}
+
+	// 3. PAGE ROUTES (/page/service-name/page-path)
+	r.GET("/page/*path", proxyHandler.PageProxy)
+
+	// 4. UPLOAD ROUTES (/upload/file-key)
+	r.Any("/upload/*path", proxyHandler.UploadProxy)
+
+	// 5. FALLBACK / BEAUTIFUL URLS (Slug)
+	r.NoRoute(proxyHandler.SlugProxy)
+
+	log.Info("Universal dynamic routes configured successfully")
 }

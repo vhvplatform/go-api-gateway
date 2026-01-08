@@ -62,16 +62,22 @@ func main() {
 		}
 	}
 
-	// Initialize Redis cache (optional)
+	// Initialize Local Cache (Ristretto)
 	var cacheClient *cache.Cache
-	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
-		cacheClient, err = cache.NewCache(redisURL)
-		if err != nil {
-			log.Error("Failed to initialize cache", zap.Error(err))
-		} else {
-			defer cacheClient.Close()
-			log.Info("Redis cache initialized")
+	// Default 100MB
+	maxCacheCost := int64(100 * 1024 * 1024)
+	if cost := os.Getenv("CACHE_MAX_COST"); cost != "" {
+		if parsedCost, err := strconv.ParseInt(cost, 10, 64); err == nil {
+			maxCacheCost = parsedCost
 		}
+	}
+
+	cacheClient, err = cache.NewCache(maxCacheCost, maxCacheCost*10)
+	if err != nil {
+		log.Error("Failed to initialize cache", zap.Error(err))
+	} else {
+		defer cacheClient.Close()
+		log.Info("Local cache initialized", zap.Int64("max_cost", maxCacheCost))
 	}
 
 	// Initialize circuit breaker
@@ -94,19 +100,30 @@ func main() {
 		return nil
 	})
 
+	// Initialize mTLS config
+	tlsConfig := &client.TLSConfig{
+		Enabled:        os.Getenv("MTLS_ENABLED") == "true",
+		CACertFile:     getServiceURL("MTLS_CA_CERT", "certs/ca.crt"),
+		ClientCertFile: getServiceURL("MTLS_CLIENT_CERT", "certs/client.crt"),
+		ClientKeyFile:  getServiceURL("MTLS_CLIENT_KEY", "certs/client.key"),
+		ServerName:     os.Getenv("MTLS_SERVER_NAME"),
+	}
+
 	// Initialize gRPC clients
-	authClient := client.NewAuthClient(getServiceURL("AUTH_SERVICE_URL", "auth-service:50051"), log)
-	userClient := client.NewUserClient(getServiceURL("USER_SERVICE_URL", "user-service:50052"), log)
-	tenantClient := client.NewTenantClient(getServiceURL("TENANT_SERVICE_URL", "tenant-service:50053"), log)
+	authClient := client.NewAuthClient(getServiceURL("AUTH_SERVICE_URL", "auth-service:50051"), log, tlsConfig)
+	userClient := client.NewUserClient(getServiceURL("USER_SERVICE_URL", "user-service:50052"), log, tlsConfig)
+	tenantClient := client.NewTenantClient(getServiceURL("TENANT_SERVICE_URL", "tenant-service:50053"), log, tlsConfig)
 
 	// Initialize HTTP client for notification service
 	notificationURL := getServiceURL("NOTIFICATION_SERVICE_URL", "http://notification-service:8084")
 
 	// Initialize handlers
+	// Initialize Handlers
 	authHandler := handler.NewAuthHandler(authClient, log)
 	userHandler := handler.NewUserHandler(userClient, log)
 	tenantHandler := handler.NewTenantHandler(tenantClient, log)
 	notificationHandler := handler.NewNotificationHandler(notificationURL, log)
+	proxyHandler := handler.NewProxyHandler(log)
 
 	// Setup Gin router
 	gin.SetMode(gin.ReleaseMode)
@@ -189,7 +206,7 @@ func main() {
 	}
 
 	// Setup routes
-	router.SetupRoutes(r, cfg, authHandler, userHandler, tenantHandler, notificationHandler, log)
+	router.SetupRoutes(r, cfg, authClient, cacheClient, proxyHandler, authHandler, userHandler, tenantHandler, notificationHandler, log)
 
 	// Start HTTP server
 	port := os.Getenv("API_GATEWAY_PORT")
