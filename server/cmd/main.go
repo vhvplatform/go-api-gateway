@@ -19,6 +19,7 @@ import (
 	"github.com/vhvplatform/go-api-gateway/internal/client"
 	"github.com/vhvplatform/go-api-gateway/internal/handler"
 	"github.com/vhvplatform/go-api-gateway/internal/health"
+	internalmiddleware "github.com/vhvplatform/go-api-gateway/internal/middleware"
 	"github.com/vhvplatform/go-api-gateway/internal/router"
 	"github.com/vhvplatform/go-api-gateway/internal/tracing"
 	"github.com/vhvplatform/go-shared/config"
@@ -205,8 +206,50 @@ func main() {
 		r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	}
 
-	// Setup routes
+	// Initialize permission middleware
+	permConfig := &internalmiddleware.PermissionConfig{
+		AuthClient: authClient,
+		Cache:      cacheClient,
+		Logger:     log,
+		CacheTTL:   5 * time.Minute,
+		SkipPaths:  []string{"/health", "/ready", "/metrics", "/auth/login", "/auth/register"},
+	}
+	permMiddleware := internalmiddleware.NewPermissionMiddleware(permConfig)
+
+	// Setup main routes
 	router.SetupRoutes(r, cfg, authClient, cacheClient, proxyHandler, authHandler, userHandler, tenantHandler, notificationHandler, log)
+
+	// Setup permission example routes (for testing/demonstration)
+	// Note: These routes use custom middleware that wraps existing AuthMiddleware
+	if os.Getenv("ENABLE_PERMISSION_EXAMPLES") == "true" {
+		// Example routes group with auth + permission middleware
+		examples := r.Group("/api/v2")
+		examples.Use(internalmiddleware.AuthMiddleware(authClient, cacheClient, cfg.JWT.Secret))
+		{
+			// User routes with permissions
+			users := examples.Group("/users")
+			users.GET("", permMiddleware.RequirePermission("user.read"), func(c *gin.Context) {
+				c.JSON(http.StatusOK, gin.H{"message": "List users", "data": []string{"user1", "user2"}})
+			})
+			users.POST("", permMiddleware.RequirePermission("user.write", "user.create"), func(c *gin.Context) {
+				c.JSON(http.StatusCreated, gin.H{"message": "User created"})
+			})
+			users.DELETE("/:id", permMiddleware.RequirePermission("user.delete"), func(c *gin.Context) {
+				c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
+			})
+
+			// Admin routes
+			admin := examples.Group("/admin")
+			admin.GET("/dashboard", permMiddleware.RequireAnyPermission("admin.dashboard", "super_admin.*"), func(c *gin.Context) {
+				c.JSON(http.StatusOK, gin.H{"message": "Admin dashboard"})
+			})
+			admin.GET("/system", permMiddleware.RequireRole("super_admin"), func(c *gin.Context) {
+				c.JSON(http.StatusOK, gin.H{"message": "System config"})
+			})
+		}
+
+		log.Info("Permission example routes enabled at /api/v2/*")
+	}
 
 	// Start HTTP server
 	port := os.Getenv("API_GATEWAY_PORT")
